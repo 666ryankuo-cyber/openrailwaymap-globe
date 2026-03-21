@@ -23,47 +23,34 @@
       display: flex; justify-content: center; align-items: center;
       z-index: 9999; background: rgba(0,0,0,0.8);
     }
-    #loginBox {
-      padding: 30px; border-radius: 15px; width: 400px; text-align: center;
-    }
+    #loginBox { padding: 30px; border-radius: 15px; width: 400px; text-align: center; }
     #loginBox h2 { margin-top: 0; font-size: 18px; color: #5dade2; letter-spacing: 1px; }
-    #loginBox p { font-size: 12px; color: #aaa; margin-bottom: 20px; }
-    #tokenInput {
-      width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px;
-      border: 1px solid #444; background: rgba(0,0,0,0.5); color: #fff; font-size: 13px;
-      outline: none; box-sizing: border-box;
-    }
-    #startBtn {
-      background: #5dade2; color: #fff; border: none; padding: 10px 25px;
-      border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s;
-    }
-    #startBtn:hover { background: #3498db; transform: translateY(-2px); }
+    #tokenInput { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #444; background: rgba(0,0,0,0.5); color: #fff; outline: none; box-sizing: border-box; }
+    #startBtn { background: #5dade2; color: #fff; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-    /* 控制面板（預設隱藏，驗證後顯示） */
+    /* 控制面板（驗證後顯示） */
     .ui-visible { display: block !important; }
     #menu, #compassContainer, #infoBar { display: none; }
 
     /* 左側選單 */
     #menu { position: absolute; top: 20px; left: 20px; padding: 18px; border-radius: 12px; width: 220px; z-index: 1000; }
     .label { font-size: 10px; margin-top: 10px; margin-bottom: 8px; color: #5dade2; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
-    .label:first-child { margin-top: 0; }
-    select { background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid #555; padding: 8px; width: 100%; cursor: pointer; border-radius: 6px; font-size: 13px; outline: none; }
+    select { background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid #555; padding: 8px; width: 100%; border-radius: 6px; font-size: 13px; cursor: pointer; }
 
-    /* 右上指北針 (紅代表北，藍代表南) */
+    /* 右上指北針 */
     #compassContainer { position: absolute; top: 80px; right: 20px; width: 60px; height: 60px; z-index: 1000; cursor: pointer; transition: 0.3s; border-radius: 50%; padding: 5px; }
-    #compassContainer:hover { transform: scale(1.1); background: rgba(25, 25, 25, 0.6); }
     #compassSvg { width: 100%; height: 100%; }
     .compass-needle-n { fill: #f1948a; } 
     .compass-needle-s { fill: #5dade2; } 
-    .compass-center { fill: #fff; stroke: #333; stroke-width: 2; }
 
     /* 左下 GIS 數據面板 */
-    #infoBar { position: absolute; bottom: 50px; left: 20px; padding: 10px 15px; border-radius: 8px; z-index: 1000; font-size: 11px; min-width: 180px; }
-    .info-item { display: flex; justify-content: space-between; color: #aaa; margin-bottom: 5px; }
-    .info-value { color: #fff; font-weight: 600; margin-left: 10px; }
-    #scaleBarWrapper { margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; }
+    #infoBar { position: absolute; bottom: 50px; left: 20px; padding: 12px 18px; border-radius: 8px; z-index: 1000; font-size: 11px; min-width: 200px; }
+    .info-item { display: flex; justify-content: space-between; color: #aaa; margin-bottom: 6px; align-items: center; }
+    .info-value { color: #fff; font-weight: 600; margin-left: 10px; font-variant-numeric: tabular-nums; }
+    .highlight-label { color: #5dade2; font-weight: bold; font-size: 9px; }
+    
+    #scaleBarWrapper { margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; }
     #scaleBar { height: 4px; border: 1px solid #fff; border-top: none; width: 100px; position: relative; }
-    #scaleLabel { font-size: 9px; margin-bottom: 2px; color: #5dade2; font-weight: bold; }
     #status { font-size: 10px; color: #aaa; margin-top: 12px; text-align: right; }
   </style>
 </head>
@@ -72,8 +59,8 @@
   <div id="tokenOverlay">
     <div id="loginBox" class="glass-panel">
       <h2>SYSTEM ACCESS</h2>
-      <p>Please enter your Cesium Ion Access Token to initialize the Global Railway Monitor.</p>
-      <input type="password" id="tokenInput" placeholder="Paste your token here...">
+      <p style="font-size: 12px; color: #aaa; margin-bottom: 20px;">Enter Cesium Token to initialize Neutral GIS.</p>
+      <input type="password" id="tokenInput" placeholder="Paste token here...">
       <button id="startBtn">INITIALIZE ENGINE</button>
     </div>
   </div>
@@ -100,21 +87,27 @@
     <div id="status">STATUS: STANDBY</div>
   </div>
 
-  <div id="compassContainer" class="glass-panel" title="Click to reset North">
+  <div id="compassContainer" class="glass-panel">
     <svg id="compassSvg" viewBox="0 0 100 100">
       <circle cx="50" cy="50" r="45" stroke="#fff" stroke-width="1.5" fill="none" opacity="0.2"/>
       <path d="M50,15 L62,50 L50,45 L38,50 Z" class="compass-needle-n"/>
       <path d="M50,85 L62,50 L50,55 L38,50 Z" class="compass-needle-s"/>
-      <circle cx="50" cy="50" r="4" class="compass-center"/>
+      <circle cx="50" cy="50" r="4" fill="#fff"/>
     </svg>
   </div>
 
   <div id="infoBar" class="glass-panel">
+    <div class="info-item">
+      <span class="highlight-label">THEORETICAL TIME</span>
+      <span id="timeVal" class="info-value">--:--:--</span>
+    </div>
+    <div class="info-item">ZONE: <span id="zoneVal" class="info-value">UTC+0</span></div>
+    <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.05); margin: 8px 0;">
     <div class="info-item">LAT: <span id="latVal" class="info-value">--</span></div>
     <div class="info-item">LON: <span id="lonVal" class="info-value">--</span></div>
     <div class="info-item">ALT: <span id="altVal" class="info-value">--</span></div>
     <div id="scaleBarWrapper">
-      <div id="scaleLabel">WAITING...</div>
+      <div id="scaleLabel" style="font-size: 9px; color: #5dade2; font-weight: bold; margin-bottom: 2px;">WAITING...</div>
       <div id="scaleBar"></div>
     </div>
   </div>
@@ -123,17 +116,12 @@
     const startBtn = document.getElementById('startBtn');
     const tokenInput = document.getElementById('tokenInput');
 
-    // 監聽啟動按鈕
     startBtn.addEventListener('click', () => {
       const userToken = tokenInput.value.trim();
-      if (!userToken) {
-        alert("Token is required!");
-        return;
-      }
+      if (!userToken) { alert("Token required!"); return; }
       initSystem(userToken);
     });
 
-    // 核心系統初始化函式
     function initSystem(token) {
       Cesium.Ion.defaultAccessToken = token;
 
@@ -145,7 +133,7 @@
           baseLayer: false
         });
 
-        // 成功後顯示 UI 並隱藏登入遮罩
+        // 啟動後顯示 UI
         document.getElementById('tokenOverlay').style.display = 'none';
         document.getElementById('menu').classList.add('ui-visible');
         document.getElementById('compassContainer').classList.add('ui-visible');
@@ -153,16 +141,14 @@
 
         const scene = viewer.scene;
         const ssc = scene.screenSpaceCameraController;
-        ssc.constrainedAxis = undefined; // 允許全方位自由旋轉
-        ssc.inertiaSpin = 0.88; // 增加旋轉慣性
-        ssc.inertiaZoom = 0.75;
+        ssc.constrainedAxis = undefined; 
+        ssc.inertiaSpin = 0.88;
 
         let baseLayer = null;
         let railwayLayer = null;
         let currentRailwayStyle = 'standard';
         let loadTimeout = null;
 
-        // 底圖切換功能
         function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
@@ -176,7 +162,6 @@
           baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
         }
 
-        // 鐵路圖層切換功能 (OpenRailwayMap)
         function executeRailwayLoading(style) {
           const oldLayer = railwayLayer;
           document.getElementById('status').innerText = "SYNCING...";
@@ -184,32 +169,45 @@
             url: `https://{s}.tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png`,
             subdomains: ['a', 'b', 'c'], minimumLevel: 1, maximumLevel: 19
           }));
-          // 延遲移除舊圖層，確保載入過程平滑
           setTimeout(() => {
             if (oldLayer) viewer.imageryLayers.remove(oldLayer);
             document.getElementById('status').innerText = "ACTIVE: " + style.toUpperCase();
           }, 700); 
         }
 
-        // 更新 GIS 實時數據
+        // 核心更新邏輯：包含經緯度、高度與理論時區時間
         function updateGISInfo() {
           const camera = viewer.camera;
           const cartographic = camera.positionCartographic;
-          // 更新經緯度
-          document.getElementById('latVal').innerText = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2) + "°";
-          document.getElementById('lonVal').innerText = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2) + "°";
-          // 更新高度 (超過 10km 顯示為 km)
+          const lonDeg = Cesium.Math.toDegrees(cartographic.longitude);
+          const latDeg = Cesium.Math.toDegrees(cartographic.latitude);
+
+          // 1. 更新座標與高度
+          document.getElementById('latVal').innerText = latDeg.toFixed(2) + "°";
+          document.getElementById('lonVal').innerText = lonDeg.toFixed(2) + "°";
           const alt = cartographic.height;
           document.getElementById('altVal').innerText = alt > 10000 ? (alt/1000).toFixed(0) + " km" : alt.toFixed(0) + " m";
 
-          // 計算比例尺 (畫面中心點兩旁的物理距離)
+          // 2. 計算理論時區時間 (Theoretical Solar Time)
+          // 原理：每 15 度經度等於 1 小時偏移
+          const offsetHours = Math.round(lonDeg / 15);
+          const nowUTC = new Date();
+          const localTheoretical = new Date(nowUTC.getTime() + (offsetHours * 3600000));
+          
+          const timeStr = localTheoretical.getUTCHours().toString().padStart(2, '0') + ":" + 
+                          localTheoretical.getUTCMinutes().toString().padStart(2, '0') + ":" + 
+                          localTheoretical.getUTCSeconds().toString().padStart(2, '0');
+          
+          document.getElementById('timeVal').innerText = timeStr;
+          document.getElementById('zoneVal').innerText = `UTC${offsetHours >= 0 ? '+' : ''}${offsetHours}`;
+
+          // 3. 計算比例尺
           const width = scene.canvas.clientWidth;
           const height = scene.canvas.clientHeight;
           const leftRay = camera.getPickRay(new Cesium.Cartesian2(width / 2 - 50, height / 2));
           const rightRay = camera.getPickRay(new Cesium.Cartesian2(width / 2 + 50, height / 2));
           const leftPos = scene.globe.pick(leftRay, scene);
           const rightPos = scene.globe.pick(rightRay, scene);
-
           if (leftPos && rightPos) {
             const distance = Cesium.Cartesian3.distance(leftPos, rightPos);
             document.getElementById('scaleLabel').innerText = distance > 1000 ? (distance / 1000).toFixed(0) + " km" : distance.toFixed(0) + " m";
@@ -221,16 +219,13 @@
         updateBaseMap('arcgis_gray');
         viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0) });
 
-        // 每幀渲染前的監聽事件
+        // 每幀監聽旋轉與數據
         scene.preRender.addEventListener(() => {
-          // 同步指北針旋轉
           const rotation = -Cesium.Math.toDegrees(viewer.camera.heading);
           document.getElementById('compassContainer').style.transform = `rotate(${rotation}deg)`;
-          // 即時更新 GIS 數據
           updateGISInfo();
         });
 
-        // 點擊指北針回正北方
         document.getElementById('compassContainer').addEventListener('click', () => {
           viewer.camera.flyTo({
             destination: viewer.camera.position,
@@ -239,24 +234,21 @@
           });
         });
 
-        // 下拉選單監聽器
         document.getElementById('baseSelect').addEventListener('change', (e) => updateBaseMap(e.target.value));
         document.getElementById('railwaySelect').addEventListener('change', (e) => {
           currentRailwayStyle = e.target.value;
           executeRailwayLoading(currentRailwayStyle);
         });
 
-        // 相機停止運動後重新整理圖層，優化效能
         viewer.camera.moveEnd.addEventListener(() => {
           if (loadTimeout) clearTimeout(loadTimeout);
           loadTimeout = setTimeout(() => executeRailwayLoading(currentRailwayStyle), 300);
         });
 
-        // 預設載入基礎鐵路圖層
         executeRailwayLoading('standard');
 
       } catch (e) {
-        alert("Initialization failed. Please check if your Token is valid.");
+        alert("Initialization failed. Reloading...");
         location.reload();
       }
     }
