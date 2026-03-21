@@ -14,12 +14,12 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Mono", monospace;
       -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
       box-shadow: 0 8px 32px rgba(0,0,0,0.5); 
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); /* 流暢的貝茲曲線動畫 */
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* HUD 切換按鈕 (收納控制) */
+    /* HUD 切換按鈕：調升至 80px 避開全螢幕按鈕 */
     #uiToggle {
-      position: absolute; bottom: 30px; right: 20px; 
+      position: absolute; bottom: 80px; right: 20px; 
       width: 45px; height: 45px; z-index: 1001;
       border-radius: 50%; cursor: pointer;
       display: none; justify-content: center; align-items: center;
@@ -27,7 +27,6 @@
     }
     #uiToggle:hover { transform: scale(1.1); background: rgba(93, 173, 226, 0.4); }
 
-    /* Token 驗證 */
     #tokenOverlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       display: flex; justify-content: center; align-items: center;
@@ -37,14 +36,14 @@
     #tokenInput { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #444; background: rgba(0,0,0,0.5); color: #fff; box-sizing: border-box; outline: none; }
     #startBtn { background: #5dade2; color: #fff; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-    /* 左側選單：收納時向左偏移 */
+    /* 左側選單 */
     #menu { 
       position: absolute; top: 20px; left: 20px; 
       padding: 15px; border-radius: 12px; width: 200px; z-index: 1000; 
     }
     .hud-hidden #menu { transform: translateX(-250px); opacity: 0; }
 
-    /* 右上指北針：保持顯示或微調 (通常建議保持顯示以利導航) */
+    /* 右上指北針 */
     #compassContainer { 
       position: absolute; top: 80px; right: 20px; 
       width: 50px; height: 50px; z-index: 1000; 
@@ -52,13 +51,13 @@
     }
     .hud-hidden #compassContainer { transform: scale(0.8); opacity: 0.5; }
 
-    /* 左下數據面板：收納時向下偏移 */
+    /* 左下數據面板：調升至 60px 避開 Logo/Credits */
     #infoBar { 
-      position: absolute; bottom: 30px; left: 20px; 
+      position: absolute; bottom: 60px; left: 20px; 
       padding: 12px; border-radius: 8px; z-index: 1000; 
       font-size: 11px; min-width: 180px; 
     }
-    .hud-hidden #infoBar { transform: translateY(150px); opacity: 0; }
+    .hud-hidden #infoBar { transform: translateY(180px); opacity: 0; }
 
     .label { font-size: 10px; margin-top: 8px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; }
     select { background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid #555; padding: 6px; width: 100%; border-radius: 6px; font-size: 12px; cursor: pointer; }
@@ -71,11 +70,14 @@
 
     @media (max-width: 600px) {
       #menu { width: 160px; }
-      #infoBar { min-width: 150px; }
+      #infoBar { min-width: 150px; bottom: 80px; } /* 小螢幕墊得更高一點 */
+      #uiToggle { bottom: 120px; }
     }
   </style>
 </head>
-<body class="ui-active"> <div id="tokenOverlay">
+<body class="ui-active">
+
+  <div id="tokenOverlay">
     <div id="loginBox" class="glass-panel">
       <h2>SYSTEM ACCESS</h2>
       <p style="font-size: 11px; color: #aaa; margin-bottom: 15px;">Initialize Neutral Railway Engine</p>
@@ -137,10 +139,8 @@
     const tokenInput = document.getElementById('tokenInput');
     const uiToggle = document.getElementById('uiToggle');
 
-    // 點擊衛星圖示切換 HUD
     uiToggle.addEventListener('click', () => {
       document.body.classList.toggle('hud-hidden');
-      // 切換圖示讓使用者知道狀態
       uiToggle.innerText = document.body.classList.contains('hud-hidden') ? '🌍' : '🛰️';
     });
 
@@ -162,7 +162,7 @@
         });
 
         document.getElementById('tokenOverlay').style.display = 'none';
-        uiToggle.style.display = 'flex'; // 啟動後顯示切換按鈕
+        uiToggle.style.display = 'flex'; 
         
         const scene = viewer.scene;
         const ssc = scene.screenSpaceCameraController;
