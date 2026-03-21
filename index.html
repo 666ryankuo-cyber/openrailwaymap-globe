@@ -8,55 +8,60 @@
   <style>
     html, body, #cesiumContainer { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #000; }
     
-    /* 通用毛玻璃樣式 */
     .glass-panel {
       background: rgba(25, 25, 25, 0.6); 
       color: #fff; border: 1px solid rgba(255,255,255,0.1); 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Mono", monospace;
       -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
       box-shadow: 0 8px 32px rgba(0,0,0,0.5); 
-      transition: all 0.3s ease; /* 讓縮放過程平滑 */
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); /* 流暢的貝茲曲線動畫 */
     }
 
-    /* Token 輸入遮罩層 */
+    /* HUD 切換按鈕 (收納控制) */
+    #uiToggle {
+      position: absolute; bottom: 30px; right: 20px; 
+      width: 45px; height: 45px; z-index: 1001;
+      border-radius: 50%; cursor: pointer;
+      display: none; justify-content: center; align-items: center;
+      font-size: 20px; transition: 0.3s;
+    }
+    #uiToggle:hover { transform: scale(1.1); background: rgba(93, 173, 226, 0.4); }
+
+    /* Token 驗證 */
     #tokenOverlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       display: flex; justify-content: center; align-items: center;
       z-index: 9999; background: rgba(0,0,0,0.8);
     }
     #loginBox { padding: 30px; border-radius: 15px; width: 85%; max-width: 400px; text-align: center; }
-    #tokenInput { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #444; background: rgba(0,0,0,0.5); color: #fff; box-sizing: border-box; }
+    #tokenInput { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #444; background: rgba(0,0,0,0.5); color: #fff; box-sizing: border-box; outline: none; }
     #startBtn { background: #5dade2; color: #fff; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-    /* 控制面板顯示控制 */
-    .ui-visible { display: flex !important; flex-direction: column; }
-    #menu, #compassContainer, #infoBar { display: none; }
-
-    /* 左側選單：使用 vh/vw 進行響應式微調 */
+    /* 左側選單：收納時向左偏移 */
     #menu { 
       position: absolute; top: 20px; left: 20px; 
-      padding: 15px; border-radius: 12px; 
-      width: 200px; z-index: 1000; 
+      padding: 15px; border-radius: 12px; width: 200px; z-index: 1000; 
     }
-    .label { font-size: 10px; margin-top: 8px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
-    select { background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid #555; padding: 6px; width: 100%; border-radius: 6px; font-size: 12px; cursor: pointer; }
+    .hud-hidden #menu { transform: translateX(-250px); opacity: 0; }
 
-    /* 右上指北針：小視窗時自動縮小 */
+    /* 右上指北針：保持顯示或微調 (通常建議保持顯示以利導航) */
     #compassContainer { 
-      position: absolute; top: 20px; right: 20px; 
+      position: absolute; top: 80px; right: 20px; 
       width: 50px; height: 50px; z-index: 1000; 
       cursor: pointer; border-radius: 50%; padding: 5px; 
     }
-    #compassSvg { width: 100%; height: 100%; }
-    .compass-needle-n { fill: #f1948a; } 
-    .compass-needle-s { fill: #5dade2; } 
+    .hud-hidden #compassContainer { transform: scale(0.8); opacity: 0.5; }
 
-    /* 左下 GIS 數據面板：關鍵響應式調整 */
+    /* 左下數據面板：收納時向下偏移 */
     #infoBar { 
       position: absolute; bottom: 30px; left: 20px; 
       padding: 12px; border-radius: 8px; z-index: 1000; 
       font-size: 11px; min-width: 180px; 
     }
+    .hud-hidden #infoBar { transform: translateY(150px); opacity: 0; }
+
+    .label { font-size: 10px; margin-top: 8px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; }
+    select { background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid #555; padding: 6px; width: 100%; border-radius: 6px; font-size: 12px; cursor: pointer; }
     .info-item { display: flex; justify-content: space-between; color: #aaa; margin-bottom: 4px; align-items: center; }
     .info-value { color: #fff; font-weight: 600; font-variant-numeric: tabular-nums; }
     .highlight-label { color: #5dade2; font-weight: bold; font-size: 9px; }
@@ -64,19 +69,13 @@
     #scaleBar { height: 3px; border: 1px solid #fff; border-top: none; width: 80px; position: relative; }
     #status { font-size: 9px; color: #777; margin-top: 8px; text-align: right; }
 
-    /* 針對手機或超小視窗的調整 */
-    @media (max-width: 600px), (max-height: 500px) {
-      #menu { top: 10px; left: 10px; width: 160px; padding: 10px; }
-      #infoBar { bottom: 35px; left: 10px; min-width: 150px; padding: 8px; }
-      #compassContainer { top: 10px; right: 10px; width: 40px; height: 40px; }
-      .label { font-size: 8px; margin-top: 4px; }
-      select { font-size: 11px; padding: 4px; }
+    @media (max-width: 600px) {
+      #menu { width: 160px; }
+      #infoBar { min-width: 150px; }
     }
   </style>
 </head>
-<body>
-
-  <div id="tokenOverlay">
+<body class="ui-active"> <div id="tokenOverlay">
     <div id="loginBox" class="glass-panel">
       <h2>SYSTEM ACCESS</h2>
       <p style="font-size: 11px; color: #aaa; margin-bottom: 15px;">Initialize Neutral Railway Engine</p>
@@ -86,6 +85,8 @@
   </div>
 
   <div id="cesiumContainer"></div>
+
+  <div id="uiToggle" class="glass-panel" title="Toggle HUD">🛰️</div>
   
   <div id="menu" class="glass-panel">
     <div class="label">Railway Layer</div>
@@ -109,8 +110,8 @@
   <div id="compassContainer" class="glass-panel">
     <svg id="compassSvg" viewBox="0 0 100 100">
       <circle cx="50" cy="50" r="45" stroke="#fff" stroke-width="1.5" fill="none" opacity="0.2"/>
-      <path d="M50,15 L62,50 L50,45 L38,50 Z" class="compass-needle-n"/>
-      <path d="M50,85 L62,50 L50,55 L38,50 Z" class="compass-needle-s"/>
+      <path d="M50,15 L62,50 L50,45 L38,50 Z" fill="#f1948a"/>
+      <path d="M50,85 L62,50 L50,55 L38,50 Z" fill="#5dade2"/>
     </svg>
   </div>
 
@@ -134,6 +135,14 @@
   <script>
     const startBtn = document.getElementById('startBtn');
     const tokenInput = document.getElementById('tokenInput');
+    const uiToggle = document.getElementById('uiToggle');
+
+    // 點擊衛星圖示切換 HUD
+    uiToggle.addEventListener('click', () => {
+      document.body.classList.toggle('hud-hidden');
+      // 切換圖示讓使用者知道狀態
+      uiToggle.innerText = document.body.classList.contains('hud-hidden') ? '🌍' : '🛰️';
+    });
 
     startBtn.addEventListener('click', () => {
       const userToken = tokenInput.value.trim();
@@ -153,10 +162,8 @@
         });
 
         document.getElementById('tokenOverlay').style.display = 'none';
-        document.getElementById('menu').classList.add('ui-visible');
-        document.getElementById('compassContainer').classList.add('ui-visible');
-        document.getElementById('infoBar').classList.add('ui-visible');
-
+        uiToggle.style.display = 'flex'; // 啟動後顯示切換按鈕
+        
         const scene = viewer.scene;
         const ssc = scene.screenSpaceCameraController;
         ssc.constrainedAxis = undefined; 
