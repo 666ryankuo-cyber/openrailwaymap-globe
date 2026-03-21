@@ -17,7 +17,6 @@
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* HUD 切換按鈕：調升至 80px 避開全螢幕按鈕 */
     #uiToggle {
       position: absolute; bottom: 80px; right: 20px; 
       width: 45px; height: 45px; z-index: 1001;
@@ -36,14 +35,12 @@
     #tokenInput { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #444; background: rgba(0,0,0,0.5); color: #fff; box-sizing: border-box; outline: none; }
     #startBtn { background: #5dade2; color: #fff; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-    /* 左側選單 */
     #menu { 
       position: absolute; top: 20px; left: 20px; 
       padding: 15px; border-radius: 12px; width: 200px; z-index: 1000; 
     }
     .hud-hidden #menu { transform: translateX(-250px); opacity: 0; }
 
-    /* 右上指北針 */
     #compassContainer { 
       position: absolute; top: 80px; right: 20px; 
       width: 50px; height: 50px; z-index: 1000; 
@@ -51,7 +48,6 @@
     }
     .hud-hidden #compassContainer { transform: scale(0.8); opacity: 0.5; }
 
-    /* 左下數據面板：調升至 60px 避開 Logo/Credits */
     #infoBar { 
       position: absolute; bottom: 60px; left: 20px; 
       padding: 12px; border-radius: 8px; z-index: 1000; 
@@ -70,7 +66,7 @@
 
     @media (max-width: 600px) {
       #menu { width: 160px; }
-      #infoBar { min-width: 150px; bottom: 80px; } /* 小螢幕墊得更高一點 */
+      #infoBar { min-width: 150px; bottom: 80px; }
       #uiToggle { bottom: 120px; }
     }
   </style>
@@ -87,7 +83,6 @@
   </div>
 
   <div id="cesiumContainer"></div>
-
   <div id="uiToggle" class="glass-panel" title="Toggle HUD">🛰️</div>
   
   <div id="menu" class="glass-panel">
@@ -160,6 +155,16 @@
           selectionIndicator: false, requestRenderMode: true, maximumRenderTimeChange: 0.0,
           baseLayer: false
         });
+
+        // --- 核心優化：重新定義 Home 鍵行為 ---
+        viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
+          e.cancel = true; // 取消預設的飛往賓州動作
+          viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0),
+            duration: 1.5 // 設定飛回來的動畫時間
+          });
+        });
+        // ------------------------------------
 
         document.getElementById('tokenOverlay').style.display = 'none';
         uiToggle.style.display = 'flex'; 
