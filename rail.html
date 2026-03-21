@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <title>Global Railway - Professional GIS Monitor</title>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.105/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.105/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <style>
+    html, body, #cesiumContainer { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #000; }
+    
+    .glass-panel {
+      background: rgba(25, 25, 25, 0.6); 
+      color: #fff; border: 1px solid rgba(255,255,255,0.1); 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Mono", monospace;
+      -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5); 
+    }
+
+    /* 左上選單 */
+    #menu {
+      position: absolute; top: 20px; left: 20px; 
+      padding: 18px; border-radius: 12px; width: 220px; z-index: 1000;
+    }
+    
+    .label { font-size: 10px; margin-top: 10px; margin-bottom: 8px; color: #5dade2; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+    .label:first-child { margin-top: 0; }
+    
+    select { 
+      background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid #555; padding: 8px; 
+      width: 100%; cursor: pointer; border-radius: 6px; font-size: 13px; outline: none;
+    }
+
+    /* 右上指北針 */
+    #compassContainer {
+      position: absolute; top: 80px; right: 20px; 
+      width: 60px; height: 60px; z-index: 1000;
+      cursor: pointer; transition: 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      border-radius: 50%; padding: 5px;
+    }
+    #compassContainer:hover { transform: scale(1.1); background: rgba(25, 25, 25, 0.6); }
+
+    /* 左下狀態列 - 往上調整以避開 Cesium Logo */
+    #infoBar {
+      position: absolute; 
+      bottom: 50px; /* 從 30px 調至 50px */
+      left: 20px; 
+      padding: 10px 15px; border-radius: 8px; z-index: 1000;
+      font-size: 11px; display: flex; flex-direction: column; gap: 5px;
+      min-width: 180px;
+    }
+    .info-item { display: flex; justify-content: space-between; color: #aaa; }
+    .info-value { color: #fff; font-weight: 600; margin-left: 10px; }
+
+    #scaleBarWrapper { margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; }
+    #scaleBar { height: 4px; border: 1px solid #fff; border-top: none; width: 100px; transition: width 0.2s; position: relative; }
+    #scaleLabel { font-size: 9px; margin-bottom: 2px; color: #5dade2; font-weight: bold; }
+
+    #compassSvg { width: 100%; height: 100%; }
+    .compass-needle-n { fill: #f1948a; } 
+    .compass-needle-s { fill: #5dade2; } 
+    .compass-center { fill: #fff; stroke: #333; stroke-width: 2; }
+    #status { font-size: 10px; color: #aaa; margin-top: 12px; text-align: right; }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  
+  <div id="menu" class="glass-panel">
+    <div class="label">Railway Layer</div>
+    <select id="railwaySelect">
+      <option value="standard">Infrastructure</option>
+      <option value="maxspeed">Max speeds</option>
+      <option value="signalling">Signalling and train protection</option>
+      <option value="electrification">Electrification</option>
+      <option value="gauge">Track Gauge</option>
+    </select>
+    <div class="label">Base Map Style</div>
+    <select id="baseSelect">
+      <option value="arcgis_gray">ArcGIS Light Gray</option>
+      <option value="bing_aerial">Bing Aerial (Satellite)</option>
+      <option value="osm">OpenStreetMap Standard</option>
+      <option value="blue_marble">NASA Blue Marble</option>
+      <option value="black_marble">NASA Black Marble</option>
+    </select>
+    <div id="status">STATUS: READY</div>
+  </div>
+
+  <div id="compassContainer" class="glass-panel" title="Click to reset North">
+    <svg id="compassSvg" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="45" stroke="#fff" stroke-width="1.5" fill="none" opacity="0.2"/>
+      <path d="M50,15 L62,50 L50,45 L38,50 Z" class="compass-needle-n"/>
+      <path d="M50,85 L62,50 L50,55 L38,50 Z" class="compass-needle-s"/>
+      <circle cx="50" cy="50" r="4" class="compass-center"/>
+    </svg>
+  </div>
+
+  <div id="infoBar" class="glass-panel">
+    <div class="info-item">LAT: <span id="latVal" class="info-value">0.00°</span></div>
+    <div class="info-item">LON: <span id="lonVal" class="info-value">0.00°</span></div>
+    <div class="info-item">ALT: <span id="altVal" class="info-value">0 km</span></div>
+    <div id="scaleBarWrapper">
+      <div id="scaleLabel">Calculating...</div>
+      <div id="scaleBar"></div>
+    </div>
+  </div>
+
+  <script>
+    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIxZmI5NTliNC1jZjg2LTRiNTItYTMxMS0yZjEzNWQwMGEzNmMiLCJpZCI6MzQ3NTgxLCJpYXQiOjE3NzQwODYwMDR9.LR3EC11EYFtoeAwFDRkJgnEZE5r3Vp9Nsq04P4KJ0NY';
+
+    const viewer = new Cesium.Viewer('cesiumContainer', {
+      baseLayerPicker: false, geocoder: false, timeline: false, animation: false,
+      sceneModePicker: true, navigationHelpButton: false, infoBox: false,
+      selectionIndicator: false, requestRenderMode: true, maximumRenderTimeChange: 0.0,
+      baseLayer: false
+    });
+
+    const scene = viewer.scene;
+    const ssc = scene.screenSpaceCameraController;
+    ssc.constrainedAxis = undefined; 
+    ssc.inertiaSpin = 0.88; 
+    ssc.inertiaZoom = 0.75;
+
+    let baseLayer = null;
+    let railwayLayer = null;
+    let currentRailwayStyle = 'standard';
+    let loadTimeout = null;
+
+    function updateBaseMap(type) {
+      if (baseLayer) viewer.imageryLayers.remove(baseLayer);
+      let provider;
+      switch(type) {
+        case 'bing_aerial': provider = Cesium.createWorldImagery({ style: Cesium.IonWorldImageryStyle.AERIAL }); break;
+        case 'osm': provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' }); break;
+        case 'blue_marble': provider = new Cesium.IonImageryProvider({ assetId: 3845 }); break;
+        case 'black_marble': provider = new Cesium.IonImageryProvider({ assetId: 3812 }); break;
+        default: provider = new Cesium.ArcGisMapServerImageryProvider({ url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer' });
+      }
+      baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
+    }
+
+    function executeRailwayLoading(style) {
+      const oldLayer = railwayLayer;
+      document.getElementById('status').innerText = "SYNCING...";
+      railwayLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+        url: `https://{s}.tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png`,
+        subdomains: ['a', 'b', 'c'], minimumLevel: 1, maximumLevel: 19
+      }));
+      setTimeout(() => {
+        if (oldLayer) viewer.imageryLayers.remove(oldLayer);
+        document.getElementById('status').innerText = "ACTIVE: " + style.toUpperCase();
+      }, 700); 
+    }
+
+    function updateGISInfo() {
+      const camera = viewer.camera;
+      const cartographic = camera.positionCartographic;
+      
+      document.getElementById('latVal').innerText = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2) + "°";
+      document.getElementById('lonVal').innerText = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2) + "°";
+      
+      const alt = cartographic.height;
+      document.getElementById('altVal').innerText = alt > 10000 ? (alt/1000).toFixed(0) + " km" : alt.toFixed(0) + " m";
+
+      const width = scene.canvas.clientWidth;
+      const height = scene.canvas.clientHeight;
+      const leftRay = camera.getPickRay(new Cesium.Cartesian2(width / 2 - 50, height / 2));
+      const rightRay = camera.getPickRay(new Cesium.Cartesian2(width / 2 + 50, height / 2));
+      
+      const leftPos = scene.globe.pick(leftRay, scene);
+      const rightPos = scene.globe.pick(rightRay, scene);
+
+      if (leftPos && rightPos) {
+        const distance = Cesium.Cartesian3.distance(leftPos, rightPos);
+        let displayText = distance > 1000 ? (distance / 1000).toFixed(0) + " km" : distance.toFixed(0) + " m";
+        document.getElementById('scaleLabel').innerText = displayText;
+      }
+    }
+
+    viewer.imageryLayers.removeAll();
+    updateBaseMap('arcgis_gray');
+    viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0) });
+
+    scene.preRender.addEventListener(() => {
+      const rotation = -Cesium.Math.toDegrees(viewer.camera.heading);
+      document.getElementById('compassContainer').style.transform = `rotate(${rotation}deg)`;
+      updateGISInfo();
+    });
+
+    document.getElementById('compassContainer').addEventListener('click', () => {
+      viewer.camera.flyTo({
+        destination: viewer.camera.position,
+        orientation: { heading: 0.0, pitch: Cesium.Math.toRadians(-90.0), roll: 0.0 },
+        duration: 1.2
+      });
+    });
+
+    document.getElementById('baseSelect').addEventListener('change', (e) => updateBaseMap(e.target.value));
+    document.getElementById('railwaySelect').addEventListener('change', (e) => {
+      currentRailwayStyle = e.target.value;
+      executeRailwayLoading(currentRailwayStyle);
+    });
+
+    viewer.camera.moveEnd.addEventListener(() => {
+      if (loadTimeout) clearTimeout(loadTimeout);
+      loadTimeout = setTimeout(() => executeRailwayLoading(currentRailwayStyle), 300);
+    });
+
+    executeRailwayLoading('standard');
+  </script>
+</body>
+</html>
