@@ -8,7 +8,6 @@
   <style>
     html, body, #cesiumContainer { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #000; }
     
-    /* 玻璃擬態基礎樣式 */
     .glass-panel {
       background: rgba(20, 20, 20, 0.85); 
       color: #fff; border: 1px solid rgba(255,255,255,0.1); 
@@ -18,36 +17,18 @@
       box-sizing: border-box; 
     }
 
-    /* 1. Token 框置中優化 */
-    #tokenOverlay { 
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-      display: flex; justify-content: center; align-items: center; 
-      z-index: 9999; background: #000; 
-    }
+    #tokenOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 9999; background: #000; }
     #loginBox { padding: 40px; border-radius: 12px; width: 400px; text-align: center; border: 1px solid #333; }
-    #tokenInput { 
-      width: 100%; padding: 12px; margin: 20px 0; border-radius: 6px; 
-      border: 1px solid #444; background: #111; color: #fff; text-align: center;
-      box-sizing: border-box;
-    }
+    #tokenInput { width: 100%; padding: 12px; margin: 20px 0; border-radius: 6px; border: 1px solid #444; background: #111; color: #fff; text-align: center; box-sizing: border-box; }
     #startBtn { background: #5dade2; color: #fff; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
 
-    /* 版面配置 */
     :root { --sidebar-width: 260px; }
     .hud-hidden #menu, .hud-hidden #infoBar { transform: translateX(-350px); opacity: 0; }
     
-    /* 2. 左上控制面板 - 搜尋欄整合於此 */
     #menu { position: absolute; top: 20px; left: 20px; padding: 20px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; transition: 0.5s; }
-    
-    #searchInput { 
-      width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); 
-      background: rgba(0,0,0,0.4); color: #fff; outline: none; margin-bottom: 10px;
-      font-size: 12px; box-sizing: border-box; /* 確保不突出邊框 */
-    }
-
+    #searchInput { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; outline: none; margin-bottom: 10px; font-size: 12px; box-sizing: border-box; }
     #infoBar { position: absolute; bottom: 40px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); font-size: 11px; z-index: 1000; transition: 0.5s; }
     
-    /* 互動元件 */
     .label { font-size: 10px; margin-top: 12px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid rgba(93, 173, 226, 0.3); }
     .sat-header { display: flex; justify-content: space-between; align-items: center; }
     #satValDisplay { color: #5dade2; font-size: 10px; }
@@ -57,7 +38,6 @@
 
     select { background: #000; color: #fff; border: 1px solid #444; width: 100%; padding: 6px; border-radius: 4px; margin-bottom: 8px; font-size: 12px; }
     .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; font-size: 11px; }
-    
     .switch { position: relative; width: 34px; height: 18px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #333; transition: .4s; border-radius: 20px; }
@@ -65,7 +45,8 @@
     input:checked + .slider { background: #5dade2; }
     input:checked + .slider:before { transform: translateX(16px); }
 
-    #compassContainer { position: absolute; top: 20px; right: 20px; width: 50px; height: 50px; z-index: 1000; cursor: pointer; transition: transform 0.2s; }
+    /* 修正：將指向針往下調整一些 (top 20px -> 60px) */
+    #compassContainer { position: absolute; top: 60px; right: 20px; width: 50px; height: 50px; z-index: 1000; cursor: pointer; transition: transform 0.2s; }
     #hudToggle { position: absolute; bottom: 40px; right: 20px; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; z-index: 1001; display: flex; justify-content: center; align-items: center; font-size: 20px; }
 
     .info-item { display: flex; justify-content: space-between; margin-bottom: 4px; color: #888; }
@@ -93,19 +74,15 @@
   
   <div id="menu" class="glass-panel">
     <input type="text" id="searchInput" placeholder="Search Location (OSM)...">
-
     <div class="label">System Control</div>
     <div class="switch-container"><span>Auto-Rotation</span><label class="switch"><input type="checkbox" id="rotateToggle"><span class="slider"></span></label></div>
     <div class="switch-container"><span>Inspector Mode</span><label class="switch"><input type="checkbox" id="inspectToggle"><span class="slider"></span></label></div>
-    
     <div class="label">Display Layer</div>
     <div class="switch-container"><span>3D Buildings</span><label class="switch"><input type="checkbox" id="buildingToggle"><span class="slider"></span></label></div>
     <div class="switch-container"><span>3D Terrain</span><label class="switch"><input type="checkbox" id="terrainToggle"><span class="slider"></span></label></div>
     <div class="switch-container"><span>Lighting</span><label class="switch"><input type="checkbox" id="lightToggle"><span class="slider"></span></label></div>
-
     <div class="label sat-header"><span>Saturation</span><span id="satValDisplay">100%</span></div>
     <input type="range" id="satSlider" min="0" max="3" step="0.1" value="1.0">
-
     <div class="label">Railway Map</div>
     <select id="railwaySelect">
       <option value="standard">Infrastructure</option>
@@ -114,7 +91,6 @@
       <option value="electrification">Electrification</option>
       <option value="gauge">Gauge</option>
     </select>
-    
     <div class="label">Base Map</div>
     <select id="baseSelect">
       <option value="osm">OpenStreetMap</option>
@@ -154,7 +130,6 @@
 
         let baseLayer = null, railLayer = null, isRotating = false;
 
-        // 指向針歸正
         document.getElementById('compassContainer').onclick = () => {
           viewer.camera.flyTo({
             destination: viewer.camera.position,
@@ -178,7 +153,6 @@
           satTimeout = setTimeout(applySaturation, 200);
         };
 
-        // 搜尋功能
         document.getElementById('searchInput').onkeypress = async (e) => {
           if (e.key === 'Enter') {
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${e.target.value}`);
