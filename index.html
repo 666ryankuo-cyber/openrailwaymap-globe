@@ -18,22 +18,26 @@
       box-sizing: border-box; 
     }
 
-    /* Token 輸入欄位置中強化 */
+    /* Token 登入介面優化 */
     #tokenOverlay { 
       position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
       display: flex; justify-content: center; align-items: center; 
       z-index: 9999; background: #000; 
     }
     #loginBox { 
-      padding: 40px; border-radius: 12px; width: 340px; 
+      padding: 40px; border-radius: 12px; width: 360px; 
       text-align: center; border: 1px solid #333;
-      display: flex; flex-direction: column; align-items: center; /* 內部元素置中 */
+      display: flex; flex-direction: column; align-items: center;
     }
+    .token-hint {
+      font-size: 11px; color: #888; margin: 15px 0; line-height: 1.6;
+    }
+    .token-hint a { color: #5dade2; text-decoration: none; font-weight: bold; }
+    
     #tokenInput { 
       width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; 
       border: 1px solid #444; background: #111; color: #fff; 
-      outline: none; text-align: center; /* 輸入文字也置中 */
-      box-sizing: border-box;
+      outline: none; text-align: center; box-sizing: border-box;
     }
     #startBtn { 
       background: #5dade2; color: #fff; border: none; padding: 12px 24px; 
@@ -44,7 +48,7 @@
     
     :root { --sidebar-width: 220px; }
 
-    /* HUD 狀態控制 */
+    /* HUD 狀態 */
     .hud-hidden #menu { transform: translateX(-300px); opacity: 0; }
     .hud-hidden #infoBar { transform: translateX(-300px); opacity: 0; }
     .hud-hidden #inspectorPanel { transform: translateX(-600px); opacity: 0; }
@@ -52,7 +56,6 @@
     #menu { position: absolute; top: 20px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; }
     #infoBar { position: absolute; bottom: 40px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); font-size: 11px; z-index: 1000; }
     
-    /* 獨立鐵路資訊欄 */
     #inspectorPanel { 
       position: absolute; bottom: 40px; left: 250px; 
       padding: 15px; border-radius: 12px; width: 260px; 
@@ -63,18 +66,18 @@
     #closeInspector { position: absolute; right: 10px; top: 10px; cursor: pointer; color: #5dade2; font-size: 18px; font-weight: bold; padding: 2px 6px; }
 
     /* 指向針 */
-    #compassContainer { position: absolute; top: 70px; right: 12px; width: 45px; height: 45px; z-index: 1000; cursor: pointer; transition: transform 0.1s linear; }
+    #compassContainer { position: absolute; top: 70px; right: 12px; width: 45px; height: 45px; z-index: 1000; cursor: pointer; }
 
-    /* 右下角 HUD 切換鈕 */
+    /* 右下角 HUD 切換鈕：位置往上移，避免與全螢幕按鈕衝突 */
     #hudToggle {
-      position: absolute; bottom: 40px; right: 20px; 
+      position: absolute; bottom: 80px; right: 20px; 
       width: 48px; height: 48px; border-radius: 50%;
       cursor: pointer; z-index: 1001;
       display: flex; justify-content: center; align-items: center;
       font-size: 20px; user-select: none;
     }
 
-    /* 文字與表單樣式 */
+    /* 其他 UI 樣式保持不變 */
     .label { font-size: 10px; margin-top: 12px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid rgba(93, 173, 226, 0.3); }
     select { background: #000; color: #fff; border: 1px solid #444; padding: 6px; width: 100%; border-radius: 4px; font-size: 12px; margin-bottom: 8px; }
     .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; font-size: 11px; }
@@ -98,7 +101,11 @@
   <div id="tokenOverlay">
     <div id="loginBox" class="glass-panel">
       <h3 style="color:#5dade2; margin-top:0; letter-spacing: 2px;">RAILWAY MONITOR</h3>
-      <input type="password" id="tokenInput" placeholder="ENTER ION TOKEN">
+      <div class="token-hint">
+        本系統需要使用 <span style="color:#fff;">Cesium Ion Token</span> 進行授權。<br>
+        您可以從 <a href="https://cesium.com/ion/tokens" target="_blank">Cesium Ion Dashboard</a> 獲取。
+      </div>
+      <input type="password" id="tokenInput" placeholder="PASTE YOUR TOKEN HERE">
       <button id="startBtn">ACCESS SYSTEM</button>
     </div>
   </div>
@@ -179,14 +186,12 @@
           baseLayer: false
         });
 
-        // --- HUD 切換 ---
         const hudToggle = document.getElementById('hudToggle');
         hudToggle.addEventListener('click', () => {
           document.body.classList.toggle('hud-hidden');
           hudToggle.innerText = document.body.classList.contains('hud-hidden') ? "🌍" : "🛰️";
         });
 
-        // --- Home 鍵回歸 ---
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
           e.cancel = true; 
           const currentPos = viewer.camera.positionCartographic;
@@ -198,7 +203,6 @@
           });
         });
 
-        // --- 地圖控制 ---
         let baseLayer = null, railwayLayer = null;
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
@@ -219,7 +223,6 @@
           viewer.scene.requestRender();
         }
 
-        // --- 點擊檢測 ---
         const inspectToggle = document.getElementById('inspectToggle');
         const inspectorPanel = document.getElementById('inspectorPanel');
         const detailContent = document.getElementById('railDetailContent');
@@ -264,7 +267,6 @@
           }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-        // --- 更新循環 ---
         let isRotating = false;
         let lastTime = Date.now();
         viewer.scene.postUpdate.addEventListener(() => {
@@ -291,7 +293,6 @@
           document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
         }
 
-        // --- 綁定 ---
         document.getElementById('baseSelect').addEventListener('change', (e) => updateBaseMap(e.target.value));
         document.getElementById('railwaySelect').addEventListener('change', (e) => loadRailway(e.target.value));
         document.getElementById('rotateToggle').addEventListener('change', (e) => isRotating = e.target.checked);
