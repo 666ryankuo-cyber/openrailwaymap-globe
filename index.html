@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
   <title>Global Railway - Professional GIS Monitor</title>
@@ -23,46 +23,39 @@
     
     #uiToggle { position: absolute; bottom: 80px; right: 20px; width: 45px; height: 45px; z-index: 1001; border-radius: 50%; cursor: pointer; display: none; justify-content: center; align-items: center; font-size: 20px; transition: 0.3s; }
     
-    :root { --sidebar-width: 220px; --sidebar-hide-offset: -280px; }
+    :root { --sidebar-width: 240px; --sidebar-hide-offset: -300px; }
     #menu { position: absolute; top: 20px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; }
-    #infoBar { position: absolute; bottom: 60px; left: 20px; padding: 15px; border-radius: 12px; z-index: 1000; font-size: 11px; width: var(--sidebar-width); max-height: 400px; overflow-y: auto; }
+    #infoBar { position: absolute; bottom: 60px; left: 20px; padding: 15px; border-radius: 12px; z-index: 1000; font-size: 11px; width: var(--sidebar-width); max-height: 450px; overflow-y: auto; }
     .hud-hidden #menu, .hud-hidden #infoBar { transform: translateX(var(--sidebar-hide-offset)); opacity: 0; }
     
     #searchBox { margin-bottom: 15px; position: relative; }
     #searchInput { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid #555; padding: 8px 12px; border-radius: 6px; color: #fff; font-size: 12px; box-sizing: border-box; outline: none; transition: 0.3s; }
     #searchInput:focus { border-color: #5dade2; background: rgba(0,0,0,0.6); }
     
-    #compassContainer { position: absolute; top: 80px; right: 20px; width: 50px; height: 50px; z-index: 1000; cursor: pointer; border-radius: 50%; padding: 5px; }
-    .hud-hidden #compassContainer { transform: scale(0.8); opacity: 0.5; }
-    
     .label { font-size: 10px; margin-top: 12px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid rgba(93, 173, 226, 0.3); padding-bottom: 2px; }
     select { background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid #555; padding: 6px; width: 100%; border-radius: 6px; font-size: 12px; cursor: pointer; margin-bottom: 8px; outline: none; }
     
-    input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-    input[type=range]:focus { outline: none; }
-    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #444; border-radius: 2px; }
-    input[type=range]::-webkit-slider-thumb { height: 12px; width: 12px; border-radius: 50%; background: #5dade2; cursor: pointer; -webkit-appearance: none; margin-top: -4px; box-shadow: 0 0 8px rgba(93,173,226,0.5); }
-
-    .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; }
+    .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 6px 0; }
     .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 20px; }
     .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
     input:checked + .slider { background-color: #5dade2; }
     input:checked + .slider:before { transform: translateX(16px); }
-    
+
     .info-item { display: flex; justify-content: space-between; color: #aaa; margin-bottom: 6px; align-items: center; }
     .info-value { color: #fff; font-weight: 600; font-variant-numeric: tabular-nums; }
     .highlight-label { color: #5dade2; font-weight: bold; font-size: 9px; }
-    #scaleBarWrapper { margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
-    #scaleBar { height: 3px; border: 1px solid #fff; border-top: none; width: 80px; position: relative; }
-    #status { font-size: 9px; color: #777; margin-top: 8px; text-align: right; }
-
-    /* 新增：查詢資訊面板樣式 */
-    #railDetailPanel { margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; display: none; }
-    .detail-row { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px; }
+    
+    #railDetailPanel { margin-top: 12px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; display: none; border-left: 2px solid #5dade2; }
+    .detail-row { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 2px; }
     .detail-key { color: #888; }
-    .detail-val { color: #fff; text-align: right; }
+    .detail-val { color: #fff; text-align: right; font-weight: bold; }
+
+    #compassContainer { position: absolute; top: 80px; right: 20px; width: 50px; height: 50px; z-index: 1000; cursor: pointer; border-radius: 50%; padding: 5px; }
+    input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: #444; border-radius: 2px; }
+    input[type=range]::-webkit-slider-thumb { height: 12px; width: 12px; border-radius: 50%; background: #5dade2; -webkit-appearance: none; margin-top: -4px; }
   </style>
 </head>
 <body class="ui-active">
@@ -125,11 +118,10 @@
     
     <div class="label">Base Map</div>
     <select id="baseSelect">
-      <option value="osm">OpenStreetMap (Endonyms)</option>
-      <option value="arcgis_gray">ArcGIS Gray (Neutral)</option>
-      <option value="dark">ArcGIS Midnight (Dark)</option>
+      <option value="osm">OpenStreetMap</option>
+      <option value="arcgis_gray">ArcGIS Gray</option>
+      <option value="dark">ArcGIS Midnight</option>
       <option value="bing_aerial">Satellite (Bing)</option>
-      <option value="sentinel">Satellite (Sentinel-2)</option>
     </select>
   </div>
 
@@ -144,20 +136,21 @@
   <div id="infoBar" class="glass-panel">
     <div class="info-item"><span class="highlight-label">SOLAR TIME</span><span id="timeVal" class="info-value">--:--:--</span></div>
     <div class="info-item">ZONE: <span id="zoneVal" class="info-value">UTC+0</span></div>
-    <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.05); margin: 8px 0;">
-    <div class="info-item">LAT: <span id="latVal" class="info-value">--</span></div>
-    <div class="info-item">LON: <span id="lonVal" class="info-value">--</span></div>
-    <div class="info-item">ALT: <span id="altVal" class="info-value">--</span></div>
     
     <div id="railDetailPanel">
       <div class="highlight-label" style="margin-bottom:8px;">INSPECTED DATA</div>
       <div id="railDetailContent"></div>
     </div>
 
-    <div id="scaleBarWrapper">
+    <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.05); margin: 10px 0;">
+    <div class="info-item">LAT: <span id="latVal" class="info-value">--</span></div>
+    <div class="info-item">LON: <span id="lonVal" class="info-value">--</span></div>
+    <div class="info-item">ALT: <span id="altVal" class="info-value">--</span></div>
+    
+    <div id="scaleBarWrapper" style="margin-top:10px;">
       <div id="scaleLabel" style="font-size: 8px; color: #5dade2; font-weight: bold;">WAITING...</div>
-      <div id="scaleBar"></div>
-      <div id="status">STATUS: STANDBY</div>
+      <div id="scaleBar" style="height: 3px; border: 1px solid #fff; border-top: none; width: 80px;"></div>
+      <div id="status" style="font-size: 9px; color: #777; margin-top: 8px; text-align: right;">STATUS: STANDBY</div>
     </div>
   </div>
 
@@ -187,18 +180,16 @@
           baseLayer: false
         });
 
-        const initialNeutralView = {
-            destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0),
+        const initialView = {
+            destination: Cesium.Cartesian3.fromDegrees(121.5, 25.0, 10000.0),
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
         };
 
         // --- 旋轉邏輯 ---
         let isRotating = false;
         let lastTime = Date.now();
-        const rotateToggle = document.getElementById('rotateToggle');
-        rotateToggle.addEventListener('change', (e) => {
+        document.getElementById('rotateToggle').addEventListener('change', (e) => {
           isRotating = e.target.checked;
-          document.getElementById('status').innerText = isRotating ? "ROTATION ACTIVE" : "MANUAL CONTROL";
         });
 
         viewer.scene.postUpdate.addEventListener(() => {
@@ -210,13 +201,10 @@
           } else { lastTime = Date.now(); }
         });
 
-        // --- 底圖與圖層管理 ---
+        // --- 底圖與日照管理 ---
         let baseLayer = null, railwayLayer = null;
-        const satRange = document.getElementById('satRange');
-        const satValueDisplay = document.getElementById('satValue');
         const lightToggle = document.getElementById('lightToggle');
         const inspectToggle = document.getElementById('inspectToggle');
-        let satTimeout = null;
 
         lightToggle.addEventListener('change', (e) => {
           viewer.scene.globe.enableLighting = e.target.checked;
@@ -228,45 +216,31 @@
           let provider;
           if (type === 'osm') provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
           else if (type === 'bing_aerial') provider = await Cesium.createWorldImageryAsync({ style: Cesium.IonWorldImageryStyle.AERIAL });
-          else if (type === 'sentinel') provider = await Cesium.IonImageryProvider.fromAssetId(2);
           else if (type === 'dark') provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer');
           else provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
           
           baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
-          baseLayer.saturation = satRange.value / 100;
-          if (type === 'dark' && !lightToggle.checked) {
-            lightToggle.checked = true;
-            viewer.scene.globe.enableLighting = true;
-          }
+          baseLayer.saturation = document.getElementById('satRange').value / 100;
           viewer.scene.requestRender();
         }
 
-        satRange.addEventListener('input', (e) => {
-          const val = e.target.value;
-          satValueDisplay.innerText = val + "%";
-          if (baseLayer) {
-            baseLayer.saturation = val / 100;
-            if (satTimeout) clearTimeout(satTimeout);
-            satTimeout = setTimeout(() => { viewer.scene.requestRender(); }, 50);
-          }
-        });
-
-        function executeRailwayLoading(style) {
-          const old = railwayLayer;
+        function loadRailway(style) {
+          if (railwayLayer) viewer.imageryLayers.remove(railwayLayer);
           railwayLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
             url: `https://{s}.tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png`,
             subdomains: ['a', 'b', 'c'], minimumLevel: 1, maximumLevel: 19
           }));
-          setTimeout(() => { if (old) viewer.imageryLayers.remove(old); viewer.scene.requestRender(); }, 600);
+          viewer.scene.requestRender();
         }
 
-        // --- Overpass API Picking 邏輯 ---
+        // --- 優化版 Overpass Picking 邏輯 ---
         const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
         const detailPanel = document.getElementById('railDetailPanel');
         const detailContent = document.getElementById('railDetailContent');
+        let isQuerying = false;
 
         handler.setInputAction(async function(click) {
-          if (!inspectToggle.checked) return;
+          if (!inspectToggle.checked || isQuerying) return;
 
           const ray = viewer.camera.getPickRay(click.position);
           const cartesian = viewer.scene.globe.pick(ray, viewer.scene);
@@ -276,81 +250,52 @@
             const lat = Cesium.Math.toDegrees(cartographic.latitude);
             const lon = Cesium.Math.toDegrees(cartographic.longitude);
 
-            document.getElementById('status').innerText = "QUERYING OSM...";
+            // 動態半徑：高度越高，搜索範圍越大
+            const height = viewer.camera.positionCartographic.height;
+            const searchRadius = Math.max(20, Math.min(800, height * 0.06)); 
+
+            isQuerying = true;
+            detailPanel.style.display = 'block';
+            detailContent.innerHTML = '<div style="color:#5dade2; font-size:10px;">📡 QUERYING NETWORK...</div>';
+            document.getElementById('status').innerText = "FETCHING OSM DATA...";
             
-            // Overpass Query: 尋找點擊處周圍 50 米的鐵路
-            const query = `[out:json][timeout:5];way["railway"](around:50,${lat},${lon});out tags;`;
+            const query = `[out:json][timeout:10];way["railway"](around:${searchRadius.toFixed(0)},${lat},${lon});out tags;`;
             const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
 
             try {
               const response = await fetch(url);
               const data = await response.json();
-              
               if (data.elements && data.elements.length > 0) {
                 const tags = data.elements[0].tags;
-                detailPanel.style.display = 'block';
                 detailContent.innerHTML = `
-                  <div class="detail-row"><span class="detail-key">Name</span><span class="detail-val">${tags.name || 'Unnamed'}</span></div>
-                  <div class="detail-row"><span class="detail-key">Type</span><span class="detail-val">${tags.railway || '--'}</span></div>
+                  <div class="detail-row"><span class="detail-key">Name</span><span class="detail-val" style="color:#5dade2">${tags.name || 'Unnamed'}</span></div>
+                  <div class="detail-row"><span class="detail-key">Type</span><span class="detail-val">${tags.railway}</span></div>
                   <div class="detail-row"><span class="detail-key">Max Speed</span><span class="detail-val">${tags.maxspeed || 'N/A'} km/h</span></div>
-                  <div class="detail-row"><span class="detail-key">Electrified</span><span class="detail-val">${tags.electrified || '--'}</span></div>
                   <div class="detail-row"><span class="detail-key">Voltage</span><span class="detail-val">${tags.voltage || '--'}</span></div>
                   <div class="detail-row"><span class="detail-key">Gauge</span><span class="detail-val">${tags.gauge || '--'} mm</span></div>
-                  <div class="detail-row"><span class="detail-key">Usage</span><span class="detail-val">${tags.usage || '--'}</span></div>
                 `;
-                document.getElementById('status').innerText = "DATA RECEIVED";
+                document.getElementById('status').innerText = "SUCCESS";
               } else {
-                detailContent.innerHTML = '<div style="font-size:10px; color:#f1948a;">No railway found in range.</div>';
-                document.getElementById('status').innerText = "NO DATA";
+                detailContent.innerHTML = '<div style="color:#aaa;">No data nearby.</div>';
+                document.getElementById('status').innerText = "NOT FOUND";
               }
-            } catch (err) {
-              console.error("Overpass error:", err);
-              document.getElementById('status').innerText = "QUERY FAILED";
-            }
+            } catch (e) {
+              detailContent.innerHTML = '<div style="color:#f1948a;">Connect Timeout.</div>';
+              document.getElementById('status').innerText = "ERROR";
+            } finally { isQuerying = false; }
           }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-        // --- UI 事件綁定 ---
+        // --- 其他連動 ---
         document.getElementById('baseSelect').addEventListener('change', (e) => updateBaseMap(e.target.value));
-        document.getElementById('railwaySelect').addEventListener('change', (e) => executeRailwayLoading(e.target.value));
-
-        let osmBuildings = null, worldTerrain = null;
-        const flatTerrain = new Cesium.EllipsoidTerrainProvider();
-        
-        document.getElementById('buildingToggle').addEventListener('change', async (e) => {
-          if (e.target.checked) {
-            if (!osmBuildings) {
-              osmBuildings = await Cesium.createOsmBuildingsAsync();
-              viewer.scene.primitives.add(osmBuildings);
-            } else osmBuildings.show = true;
-          } else if(osmBuildings) osmBuildings.show = false;
-          viewer.scene.requestRender();
+        document.getElementById('railwaySelect').addEventListener('change', (e) => loadRailway(e.target.value));
+        document.getElementById('satRange').addEventListener('input', (e) => {
+            if (baseLayer) baseLayer.saturation = e.target.value / 100;
+            document.getElementById('satValue').innerText = e.target.value + "%";
+            viewer.scene.requestRender();
         });
 
-        document.getElementById('terrainToggle').addEventListener('change', async (e) => {
-          if (e.target.checked) {
-            if (!worldTerrain) worldTerrain = await Cesium.createWorldTerrainAsync();
-            viewer.terrainProvider = worldTerrain;
-          } else viewer.terrainProvider = flatTerrain;
-          viewer.scene.requestRender();
-        });
-
-        // 搜尋功能
-        const searchInput = document.getElementById('searchInput');
-        searchInput.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') {
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchInput.value)}&limit=1`, {
-              headers: { 'Accept': 'application/json', 'User-Agent': 'RailwayGIS/1.0' }
-            }).then(res => res.json()).then(data => {
-              if (data.length > 0) {
-                viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(parseFloat(data[0].lon), parseFloat(data[0].lat), 5000.0), duration: 2.0 });
-                searchInput.value = ""; searchInput.blur();
-              }
-            });
-          }
-        });
-
-        // 定時更新遙測數據
+        // 遙測更新
         function updateTelemetry() {
           const carto = viewer.camera.positionCartographic;
           if (!carto) return;
@@ -361,28 +306,22 @@
           document.getElementById('altVal').innerText = (carto.height/1000).toFixed(1) + "km";
           
           const now = new Date();
-          const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
-          const solarTotalMinutes = (utcMinutes + (lonDeg / 15) * 60 + 1440) % 1440;
-          document.getElementById('timeVal').innerText = `${Math.floor(solarTotalMinutes / 60).toString().padStart(2,'0')}:${Math.floor(solarTotalMinutes % 60).toString().padStart(2,'0')}:${now.getUTCSeconds().toString().padStart(2,'0')}`;
-          document.getElementById('zoneVal').innerText = "UTC" + (lonDeg >= 0 ? "+" : "") + (lonDeg / 15).toFixed(1);
-          
-          const scaleKm = (2 * Math.tan(Cesium.Math.toRadians(30)) * carto.height / viewer.canvas.clientWidth) * 80 / 1000; 
-          document.getElementById('scaleLabel').innerText = scaleKm > 1000 ? (scaleKm/1000).toFixed(1) + "k KM" : (scaleKm > 1 ? scaleKm.toFixed(1) + " KM" : (scaleKm*1000).toFixed(0) + " M");
+          const solarMinutes = (now.getUTCHours() * 60 + now.getUTCMinutes() + (lonDeg / 15) * 60 + 1440) % 1440;
+          document.getElementById('timeVal').innerText = `${Math.floor(solarMinutes/60).toString().padStart(2,'0')}:${Math.floor(solarMinutes%60).toString().padStart(2,'0')}:${now.getUTCSeconds().toString().padStart(2,'0')}`;
         }
 
-        // 初始化
+        // 初始化啟動
         document.getElementById('tokenOverlay').style.display = 'none';
         uiToggle.style.display = 'flex'; 
         await updateBaseMap('osm');
-        executeRailwayLoading('standard');
-        viewer.camera.setView(initialNeutralView);
-        
+        loadRailway('standard');
+        viewer.camera.setView(initialView);
         viewer.scene.preRender.addEventListener(() => {
           document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
           updateTelemetry();
         });
 
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error(e); alert("Initialization Failed."); }
     }
   </script>
 </body>
