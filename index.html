@@ -7,27 +7,33 @@
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.105/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <style>
     html, body, #cesiumContainer { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #000; }
+    
     .glass-panel {
       background: rgba(20, 20, 20, 0.8); 
       color: #fff; border: 1px solid rgba(255,255,255,0.1); 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Mono", monospace;
       -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px);
       box-shadow: 0 8px 32px rgba(0,0,0,0.8); 
-      transition: all 0.3s ease-out;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
       box-sizing: border-box; 
     }
+
     #tokenOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 9999; background: #000; }
     #loginBox { padding: 40px; border-radius: 12px; width: 320px; text-align: center; border: 1px solid #333; }
     #tokenInput { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #444; background: #111; color: #fff; outline: none; }
     #startBtn { background: #5dade2; color: #fff; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
     
-    :root { --sidebar-width: 220px; --default-height: 15000000.0; }
+    :root { --sidebar-width: 220px; }
+
+    /* HUD 隱藏時的狀態 */
+    .hud-hidden #menu { transform: translateX(-300px); opacity: 0; }
+    .hud-hidden #infoBar { transform: translateX(-300px); opacity: 0; }
+    .hud-hidden #inspectorPanel { transform: translateX(-600px); opacity: 0; }
+
     #menu { position: absolute; top: 20px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; }
-    
-    /* 左下角 UI */
     #infoBar { position: absolute; bottom: 40px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); font-size: 11px; z-index: 1000; }
     
-    /* 獨立鐵路資訊欄 (向左收納) */
+    /* 獨立鐵路資訊欄 */
     #inspectorPanel { 
       position: absolute; bottom: 40px; left: 250px; 
       padding: 15px; border-radius: 12px; width: 260px; 
@@ -36,17 +42,24 @@
     }
     #inspectorPanel.active { opacity: 1; visibility: visible; pointer-events: auto; transform: translateX(0); }
     
-    #closeInspector { 
-      position: absolute; right: 10px; top: 10px; cursor: pointer; color: #5dade2; 
-      font-size: 18px; font-weight: bold; padding: 2px 6px;
-    }
+    #closeInspector { position: absolute; right: 10px; top: 10px; cursor: pointer; color: #5dade2; font-size: 18px; font-weight: bold; padding: 2px 6px; }
 
-    /* 指向針下移，避開 Home 鍵 */
+    /* 指向針 */
     #compassContainer { position: absolute; top: 120px; right: 12px; width: 45px; height: 45px; z-index: 1000; cursor: pointer; }
 
+    /* 右下角 HUD 切換鈕 */
+    #hudToggle {
+      position: absolute; bottom: 40px; right: 20px; 
+      width: 48px; height: 48px; border-radius: 50%;
+      cursor: pointer; z-index: 1001;
+      display: flex; justify-content: center; align-items: center;
+      font-size: 20px;
+      user-select: none;
+    }
+
+    /* 通用樣式 */
     .label { font-size: 10px; margin-top: 12px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid rgba(93, 173, 226, 0.3); }
     select { background: #000; color: #fff; border: 1px solid #444; padding: 6px; width: 100%; border-radius: 4px; font-size: 12px; margin-bottom: 8px; }
-    
     .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; font-size: 11px; }
     .switch { position: relative; width: 34px; height: 18px; }
     .switch input { opacity: 0; width: 0; height: 0; }
@@ -54,11 +67,9 @@
     .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background: #fff; transition: .4s; border-radius: 50%; }
     input:checked + .slider { background: #5dade2; }
     input:checked + .slider:before { transform: translateX(16px); }
-    
     .info-item { display: flex; justify-content: space-between; color: #aaa; margin-bottom: 5px; }
     .info-value { color: #fff; font-weight: 600; font-variant-numeric: tabular-nums; }
     .highlight-label { color: #5dade2; font-weight: bold; font-size: 9px; }
-    
     #scaleBar { height: 2px; border: 1px solid #fff; border-top: none; width: 80px; margin-top: 4px; }
     .detail-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .detail-key { color: #888; }
@@ -76,6 +87,8 @@
   </div>
 
   <div id="cesiumContainer"></div>
+
+  <div id="hudToggle" class="glass-panel" title="Toggle HUD Display">🛰️</div>
   
   <div id="menu" class="glass-panel">
     <div class="label">Display Control</div>
@@ -135,26 +148,26 @@
       Cesium.Ion.defaultAccessToken = token;
       try {
         const viewer = new Cesium.Viewer('cesiumContainer', {
-          baseLayerPicker: false, 
-          geocoder: true,        // 保留預設搜尋
-          homeButton: true,      // 保留預設 Home
-          sceneModePicker: true, 
-          navigationHelpButton: true,
-          infoBox: false, 
-          selectionIndicator: false, 
-          requestRenderMode: true, 
-          baseLayer: false
+          baseLayerPicker: false, geocoder: true, homeButton: true,
+          sceneModePicker: true, navigationHelpButton: true,
+          infoBox: false, selectionIndicator: false, requestRenderMode: true, baseLayer: false
         });
 
-        // --- 2. 自定義 Home 鍵：回到當前位置的高空預設 ---
+        // --- HUD 切換邏輯 ---
+        const hudToggle = document.getElementById('hudToggle');
+        hudToggle.addEventListener('click', () => {
+          document.body.classList.toggle('hud-hidden');
+          // 切換圖示：隱藏時顯示地球，開啟時顯示衛星
+          hudToggle.innerText = document.body.classList.contains('hud-hidden') ? "🌍" : "🛰️";
+        });
+
+        // --- 自定義 Home 鍵：回到當前位置的高空 ---
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
           e.cancel = true; 
           const currentPos = viewer.camera.positionCartographic;
           viewer.camera.flyTo({
             destination: Cesium.Cartesian3.fromDegrees(
-              Cesium.Math.toDegrees(currentPos.longitude), 
-              Cesium.Math.toDegrees(currentPos.latitude), 
-              15000000.0 // 初始高空高度
+              Cesium.Math.toDegrees(currentPos.longitude), Cesium.Math.toDegrees(currentPos.latitude), 15000000.0
             ),
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
           });
@@ -181,7 +194,7 @@
           viewer.scene.requestRender();
         }
 
-        // --- 4. 鐵路資訊欄收納邏輯 ---
+        // --- 鐵路資訊欄 ---
         const inspectToggle = document.getElementById('inspectToggle');
         const inspectorPanel = document.getElementById('inspectorPanel');
         const detailContent = document.getElementById('railDetailContent');
@@ -189,10 +202,8 @@
         let isQuerying = false;
 
         closeBtn.addEventListener('click', () => {
-          inspectorPanel.classList.remove('active'); // 淡出並向左收納動畫
-          setTimeout(() => {
-            detailContent.innerHTML = ""; // 刪除資訊內容
-          }, 300);
+          inspectorPanel.classList.remove('active');
+          setTimeout(() => { detailContent.innerHTML = ""; }, 300); // 刪除存取的資訊
         });
 
         const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
@@ -200,7 +211,6 @@
           if (!inspectToggle.checked || isQuerying) return;
           const ray = viewer.camera.getPickRay(click.position);
           const cartesian = viewer.scene.globe.pick(ray, viewer.scene);
-          
           if (cartesian) {
             const carto = Cesium.Cartographic.fromCartesian(cartesian);
             const lat = Cesium.Math.toDegrees(carto.latitude);
@@ -233,7 +243,7 @@
           }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-        // --- 旋轉與 UI 更新 ---
+        // --- 旋轉與更新 ---
         let isRotating = false;
         let lastTime = Date.now();
         viewer.scene.postUpdate.addEventListener(() => {
@@ -252,22 +262,19 @@
           document.getElementById('latVal').innerText = lat.toFixed(2) + "°";
           document.getElementById('lonVal').innerText = lon.toFixed(2) + "°";
           document.getElementById('altVal').innerText = (c.height/1000).toFixed(0) + "km";
-          
           const now = new Date();
           const solarMin = (now.getUTCHours()*60 + now.getUTCMinutes() + (lon/15)*60 + 1440) % 1440;
           document.getElementById('timeVal').innerText = `${Math.floor(solarMin/60).toString().padStart(2,'0')}:${Math.floor(solarMin%60).toString().padStart(2,'0')}:${now.getUTCSeconds().toString().padStart(2,'0')}`;
-          
           const skm = (2 * Math.tan(Cesium.Math.toRadians(30)) * c.height / viewer.canvas.clientWidth) * 80 / 1000;
           document.getElementById('scaleLabel').innerText = skm > 1 ? skm.toFixed(1) + " KM" : (skm*1000).toFixed(0) + " M";
           document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
         }
 
-        // --- 綁定 ---
+        // --- 監聽事件 ---
         document.getElementById('baseSelect').addEventListener('change', (e) => updateBaseMap(e.target.value));
         document.getElementById('railwaySelect').addEventListener('change', (e) => loadRailway(e.target.value));
         document.getElementById('rotateToggle').addEventListener('change', (e) => isRotating = e.target.checked);
         document.getElementById('lightToggle').addEventListener('change', (e) => { viewer.scene.globe.enableLighting = e.target.checked; viewer.scene.requestRender(); });
-
         let bld = null;
         document.getElementById('buildingToggle').addEventListener('change', async (e) => {
           if (e.target.checked) { if(!bld) bld = await Cesium.createOsmBuildingsAsync(); viewer.scene.primitives.add(bld); }
@@ -283,7 +290,6 @@
           orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
         });
         viewer.scene.preRender.addEventListener(updateUI);
-
       } catch (e) { console.error(e); }
     }
   </script>
