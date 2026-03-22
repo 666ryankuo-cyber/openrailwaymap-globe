@@ -37,13 +37,13 @@
     .label { font-size: 10px; margin-top: 8px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; }
     select { background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid #555; padding: 6px; width: 100%; border-radius: 6px; font-size: 12px; cursor: pointer; margin-bottom: 8px; }
     
-    .switch-container { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; margin-bottom: 10px; }
-    .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+    .switch-container { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; margin-bottom: 5px; }
+    .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 20px; }
-    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
     input:checked + .slider { background-color: #5dade2; }
-    input:checked + .slider:before { transform: translateX(20px); }
+    input:checked + .slider:before { transform: translateX(16px); }
     
     .info-item { display: flex; justify-content: space-between; color: #aaa; margin-bottom: 4px; align-items: center; }
     .info-value { color: #fff; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -73,8 +73,12 @@
     
     <div class="label">Display Options</div>
     <div class="switch-container">
-      <span style="font-size: 11px; color: #ccc;">OSM 3D Buildings</span>
+      <span style="font-size: 11px; color: #ccc;">3D Buildings</span>
       <label class="switch"><input type="checkbox" id="buildingToggle"><span class="slider"></span></label>
+    </div>
+    <div class="switch-container">
+      <span style="font-size: 11px; color: #ccc;">3D Terrain</span>
+      <label class="switch"><input type="checkbox" id="terrainToggle"><span class="slider"></span></label>
     </div>
     
     <div class="label">Railway Layer</div>
@@ -144,14 +148,14 @@
           baseLayer: false
         });
 
-        // --- 中立化 Home 鍵設定 ---
+        // --- 中立 Home 鍵設定 ---
         const neutralView = {
             destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0),
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
         };
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
-            e.cancel = true; // 取消原本回美國的動作
-            viewer.camera.flyTo(neutralView); // 改飛往 (0,0)
+            e.cancel = true;
+            viewer.camera.flyTo(neutralView);
         });
 
         document.getElementById('tokenOverlay').style.display = 'none';
@@ -160,8 +164,9 @@
         let baseLayer = null;
         let railwayLayer = null;
         let currentRailwayStyle = 'standard';
-        let loadTimeout = null;
         let osmBuildings = null;
+        let worldTerrain = null; // 快取地形數據
+        const flatTerrain = new Cesium.EllipsoidTerrainProvider(); // 快取平坦地圖
 
         // 搜尋邏輯
         const searchInput = document.getElementById('searchInput');
@@ -195,8 +200,23 @@
               osmBuildings = await Cesium.createOsmBuildingsAsync();
               viewer.scene.primitives.add(osmBuildings);
             } else { osmBuildings.show = true; }
-            document.getElementById('status').innerText = "3D ACTIVE";
-          } else { if(osmBuildings) osmBuildings.show = false; document.getElementById('status').innerText = "3D HIDDEN"; }
+            document.getElementById('status').innerText = "3D BUILDINGS ON";
+          } else { if(osmBuildings) osmBuildings.show = false; document.getElementById('status').innerText = "3D BUILDINGS OFF"; }
+        });
+
+        // --- 3D 地形開關邏輯 ---
+        document.getElementById('terrainToggle').addEventListener('change', async (e) => {
+          if (e.target.checked) {
+            if (!worldTerrain) {
+              document.getElementById('status').innerText = "DOWNLOADING TERRAIN...";
+              worldTerrain = await Cesium.createWorldTerrainAsync();
+            }
+            viewer.terrainProvider = worldTerrain;
+            document.getElementById('status').innerText = "TERRAIN ACTIVE";
+          } else {
+            viewer.terrainProvider = flatTerrain;
+            document.getElementById('status').innerText = "TERRAIN OFF (FLAT)";
+          }
         });
 
         // 圖層切換
@@ -237,7 +257,7 @@
           executeRailwayLoading(currentRailwayStyle);
         });
 
-        // --- 啟動初始化為 (0,0) ---
+        // 啟動初始化
         await updateBaseMap('arcgis_gray');
         executeRailwayLoading('standard');
         viewer.camera.setView(neutralView);
@@ -245,8 +265,8 @@
         scene.preRender.addEventListener(() => {
           document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
           const carto = viewer.camera.positionCartographic;
-          document.getElementById('latVal').innerText = Cesium.Math.toDegrees(carto.latitude).toFixed(2);
-          document.getElementById('lonVal').innerText = Cesium.Math.toDegrees(carto.longitude).toFixed(2);
+          document.getElementById('latVal').innerText = Cesium.Math.toDegrees(carto.latitude).toFixed(2) + "°";
+          document.getElementById('lonVal').innerText = Cesium.Math.toDegrees(carto.longitude).toFixed(2) + "°";
           document.getElementById('altVal').innerText = (carto.height/1000).toFixed(1) + "km";
         });
 
