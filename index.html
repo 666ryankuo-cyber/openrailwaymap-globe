@@ -168,16 +168,14 @@
       Cesium.Ion.defaultAccessToken = token;
 
       try {
+        // 先建立 Viewer
         const viewer = new Cesium.Viewer('cesiumContainer', {
           baseLayerPicker: false, geocoder: false, timeline: false, animation: false,
           sceneModePicker: true, navigationHelpButton: false, infoBox: false,
           selectionIndicator: false, requestRenderMode: true, maximumRenderTimeChange: 0.0,
-          baseLayer: false
+          baseLayer: false // 手動管理底圖
         });
 
-        document.getElementById('tokenOverlay').style.display = 'none';
-        uiToggle.style.display = 'flex'; 
-        
         const scene = viewer.scene;
         const ssc = scene.screenSpaceCameraController;
         ssc.inertiaSpin = 0.88;
@@ -187,37 +185,7 @@
         let currentRailwayStyle = 'standard';
         let loadTimeout = null;
 
-        // --- 重點修正：切換為 Cesium Ion Geocoder ---
-        const ionGeocoder = new Cesium.IonGeocodeProvider();
-        const searchInput = document.getElementById('searchInput');
-
-        searchInput.addEventListener('keypress', async (e) => {
-          if (e.key === 'Enter') {
-            const query = searchInput.value;
-            if (!query) return;
-            document.getElementById('status').innerText = "SEARCHING...";
-
-            try {
-              // 使用官方 Geocoder，會自動包含 token，不產生 CORS 錯誤
-              const results = await ionGeocoder.geocode(query);
-              if (results && results.length > 0) {
-                viewer.camera.flyTo({
-                  destination: results[0].destination,
-                  duration: 2.5
-                });
-                document.getElementById('status').innerText = "NAVIGATED";
-                searchInput.blur();
-              } else {
-                document.getElementById('status').innerText = "NOT FOUND";
-              }
-            } catch (err) {
-              console.error("Geocode Error:", err);
-              document.getElementById('status').innerText = "SEARCH ERROR";
-            }
-          }
-        });
-
-        // --- 底圖加載邏輯 (維持你原本的結構) ---
+        // 底圖加載函數
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
@@ -229,8 +197,52 @@
             else provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
             
             baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
-          } catch(e) { console.warn(e); }
+            return true;
+          } catch(e) { 
+            console.error("BaseMap Error:", e); 
+            return false;
+          }
         }
+
+        // 初始化底圖，成功後再關閉遮罩 (避免全藍)
+        const baseReady = await updateBaseMap('arcgis_gray');
+        if (baseReady) {
+          document.getElementById('tokenOverlay').style.display = 'none';
+          uiToggle.style.display = 'flex'; 
+        } else {
+          alert("Base map failed to load. Check Token or Network.");
+        }
+
+        // --- 搜尋邏輯：Enter 後搜尋並清空 ---
+        const ionGeocoder = new Cesium.IonGeocodeProvider();
+        const searchInput = document.getElementById('searchInput');
+
+        searchInput.addEventListener('keypress', async (e) => {
+          if (e.key === 'Enter') {
+            const query = searchInput.value.trim();
+            if (!query) return;
+            document.getElementById('status').innerText = "SEARCHING...";
+
+            try {
+              const results = await ionGeocoder.geocode(query);
+              if (results && results.length > 0) {
+                viewer.camera.flyTo({
+                  destination: results[0].destination,
+                  duration: 2.5
+                });
+                document.getElementById('status').innerText = "NAVIGATED";
+                
+                // 關鍵指令：清空文字並移除焦點
+                searchInput.value = "";
+                searchInput.blur(); 
+              } else {
+                document.getElementById('status').innerText = "NOT FOUND";
+              }
+            } catch (err) {
+              document.getElementById('status').innerText = "SEARCH ERROR";
+            }
+          }
+        });
 
         function executeRailwayLoading(style) {
           const oldLayer = railwayLayer;
@@ -273,8 +285,6 @@
           }
         }
 
-        viewer.imageryLayers.removeAll();
-        await updateBaseMap('arcgis_gray');
         viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0) });
 
         scene.preRender.addEventListener(() => {
