@@ -157,7 +157,7 @@
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
         };
 
-        // --- 旋轉模式邏輯 ---
+        // --- 旋轉模式邏輯 (已修改：移除飛回動作，直接原地旋轉) ---
         let isRotating = false;
         let lastTime = Date.now();
         const rotateToggle = document.getElementById('rotateToggle');
@@ -165,13 +165,8 @@
         rotateToggle.addEventListener('change', (e) => {
           isRotating = e.target.checked;
           if (isRotating) {
-            document.getElementById('status').innerText = "ENTERING ROTATION...";
-            viewer.camera.flyTo({
-              destination: Cesium.Cartesian3.fromDegrees(Cesium.Math.toDegrees(viewer.camera.positionCartographic.longitude), 0, 15000000.0),
-              orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 },
-              duration: 2.0,
-              complete: () => { document.getElementById('status').innerText = "ROTATION ACTIVE"; }
-            });
+            document.getElementById('status').innerText = "ROTATION ACTIVE";
+            lastTime = Date.now(); // 確保開始時間同步
           } else {
             document.getElementById('status').innerText = "MANUAL CONTROL";
           }
@@ -182,23 +177,27 @@
             const now = Date.now();
             const delta = (now - lastTime) / 1000.0;
             lastTime = now;
+            // 繞 Z 軸旋轉 (速度可調整 0.05 為慢速旋轉)
             viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, 0.05 * delta);
-          } else { lastTime = Date.now(); }
+          } else { 
+            lastTime = Date.now(); 
+          }
         });
 
-        // --- 比例尺與時間計算功能 ---
+        // --- 遙測與比例尺更新功能 ---
         function updateTelemetry() {
           const camera = viewer.camera;
           const carto = camera.positionCartographic;
+          if (!carto) return;
+
           const lonDeg = Cesium.Math.toDegrees(carto.longitude);
           const latDeg = Cesium.Math.toDegrees(carto.latitude);
           
-          // 1. 更新座標與高度
           document.getElementById('latVal').innerText = latDeg.toFixed(2) + "°";
           document.getElementById('lonVal').innerText = lonDeg.toFixed(2) + "°";
           document.getElementById('altVal').innerText = (carto.height/1000).toFixed(1) + "km";
 
-          // 2. 更新 Solar Time (依經度計算地方時)
+          // Solar Time
           const now = new Date();
           const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
           const offsetMinutes = (lonDeg / 15) * 60; 
@@ -208,16 +207,15 @@
           const sS = now.getUTCSeconds().toString().padStart(2, '0');
           document.getElementById('timeVal').innerText = `${sH}:${sM}:${sS}`;
 
-          // 3. 更新 UTC Zone
+          // UTC Zone
           const zone = (lonDeg / 15).toFixed(1);
           document.getElementById('zoneVal').innerText = "UTC" + (zone >= 0 ? "+" : "") + zone;
 
-          // 4. 計算比例尺 (簡易算法：根據高度估算地表 80px 的距離)
+          // Scale Bar Logic
           const width = viewer.canvas.clientWidth;
-          const height = camera.positionCartographic.height;
-          // 視場角約為 60 度，計算地表可見範圍
+          const height = carto.height;
           const visibleWidth = 2 * Math.tan(Cesium.Math.toRadians(30)) * height;
-          const scaleKm = (visibleWidth / width) * 80 / 1000; // 80px 對應的 km
+          const scaleKm = (visibleWidth / width) * 80 / 1000; 
           
           let scaleText;
           if (scaleKm > 1000) scaleText = (scaleKm/1000).toFixed(1) + "k KM";
@@ -226,7 +224,7 @@
           document.getElementById('scaleLabel').innerText = scaleText;
         }
 
-        // --- 核心導航修正 (Home 鍵) ---
+        // --- 地圖導覽與功能按鈕 ---
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
             e.cancel = true;
             const ray = viewer.camera.getPickRay(new Cesium.Cartesian2(viewer.canvas.clientWidth / 2, viewer.canvas.clientHeight / 2));
@@ -237,7 +235,6 @@
                     destination: Cesium.Cartesian3.fromDegrees(Cesium.Math.toDegrees(c.longitude), Cesium.Math.toDegrees(c.latitude), 15000000.0),
                     orientation: { heading: viewer.camera.heading, pitch: Cesium.Math.toRadians(-90), roll: 0 }
                 });
-                document.getElementById('status').innerText = "VERTICAL ASCENT";
             } else { viewer.camera.flyTo(initialNeutralView); }
         });
 
@@ -247,16 +244,14 @@
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 },
             duration: 1.5
           });
-          document.getElementById('status').innerText = "NORTH ALIGNED";
         });
 
-        // 登入後初始化
         document.getElementById('tokenOverlay').style.display = 'none';
         uiToggle.style.display = 'flex'; 
         let baseLayer = null, railwayLayer = null, osmBuildings = null, worldTerrain = null;
         const flatTerrain = new Cesium.EllipsoidTerrainProvider();
 
-        // 搜尋功能
+        // 搜尋功能邏輯
         const searchInput = document.getElementById('searchInput');
         searchInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
@@ -271,14 +266,13 @@
                   destination: Cesium.Cartesian3.fromDegrees(parseFloat(data[0].lon), parseFloat(data[0].lat), 5000.0),
                   duration: 2.0
                 });
-                document.getElementById('status').innerText = "NAVIGATED";
                 searchInput.value = ""; searchInput.blur();
               }
             });
           }
         });
 
-        // 選項切換
+        // 圖層控制
         document.getElementById('buildingToggle').addEventListener('change', async (e) => {
           if (e.target.checked) {
             if (!osmBuildings) {
@@ -325,7 +319,7 @@
         executeRailwayLoading('standard');
         viewer.camera.setView(initialNeutralView);
 
-        // 每幀渲染前更新數據
+        // 每幀監聽更新
         viewer.scene.preRender.addEventListener(() => {
           document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
           updateTelemetry();
