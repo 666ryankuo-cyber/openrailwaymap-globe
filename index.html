@@ -9,83 +9,101 @@
     html, body, #cesiumContainer { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #000; }
     
     .glass-panel {
-      background: rgba(20, 20, 20, 0.8); 
+      background: rgba(20, 20, 20, 0.85); 
       color: #fff; border: 1px solid rgba(255,255,255,0.1); 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Mono", monospace;
       -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px);
       box-shadow: 0 8px 32px rgba(0,0,0,0.8); 
-      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
       box-sizing: border-box; 
     }
 
-    #tokenOverlay { 
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-      display: flex; justify-content: center; align-items: center; 
-      z-index: 9999; background: #000; 
-    }
-    #loginBox { padding: 40px; border-radius: 12px; width: 380px; text-align: center; border: 1px solid #333; display: flex; flex-direction: column; align-items: center; }
-    .token-hint { font-size: 11px; color: #888; margin: 18px 0; line-height: 1.6; }
-    .token-hint a { color: #5dade2; text-decoration: none; font-weight: bold; }
-    #tokenInput { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #444; background: #111; color: #fff; outline: none; text-align: center; box-sizing: border-box; }
+    /* Login Overlay */
+    #tokenOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 9999; background: #000; }
+    #loginBox { padding: 40px; border-radius: 12px; width: 380px; text-align: center; border: 1px solid #333; }
+    #tokenInput { width: 100%; padding: 12px; margin: 20px 0; border-radius: 6px; border: 1px solid #444; background: #111; color: #fff; text-align: center; }
     #startBtn { background: #5dade2; color: #fff; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
+
+    /* Layout Controls */
+    :root { --sidebar-width: 240px; }
+    .hud-hidden #menu, .hud-hidden #infoBar, .hud-hidden #searchBox { transform: translateX(-350px); opacity: 0; }
     
-    :root { --sidebar-width: 220px; }
-    .hud-hidden #menu, .hud-hidden #infoBar { transform: translateX(-300px); opacity: 0; }
-    .hud-hidden #inspectorPanel { transform: translateX(-600px); opacity: 0; }
+    #searchBox { position: absolute; top: 20px; left: 20px; width: var(--sidebar-width); z-index: 1001; transition: 0.5s; }
+    #searchInput { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: rgba(0,0,0,0.6); color: #fff; outline: none; }
 
-    #menu { position: absolute; top: 20px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; }
-    #infoBar { position: absolute; bottom: 40px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); font-size: 11px; z-index: 1000; }
+    #menu { position: absolute; top: 80px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; transition: 0.5s; }
+    #infoBar { position: absolute; bottom: 40px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); font-size: 11px; z-index: 1000; transition: 0.5s; }
     
-    #inspectorPanel { position: absolute; bottom: 40px; left: 250px; padding: 15px; border-radius: 12px; width: 260px; opacity: 0; visibility: hidden; transform: translateX(-20px); z-index: 999; }
-    #inspectorPanel.active { opacity: 1; visibility: visible; transform: translateX(0); }
-    #closeInspector { position: absolute; right: 10px; top: 10px; cursor: pointer; color: #5dade2; font-size: 18px; font-weight: bold; }
+    #inspectorPanel { position: absolute; bottom: 40px; left: 280px; padding: 15px; border-radius: 12px; width: 260px; opacity: 0; visibility: hidden; transition: 0.4s; z-index: 999; }
+    #inspectorPanel.active { opacity: 1; visibility: visible; }
 
-    #hudToggle { position: absolute; bottom: 80px; right: 20px; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; z-index: 1001; display: flex; justify-content: center; align-items: center; font-size: 20px; }
-
+    /* Elements */
     .label { font-size: 10px; margin-top: 12px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid rgba(93, 173, 226, 0.3); }
-    select, input[type="range"] { background: #000; color: #fff; border: 1px solid #444; width: 100%; margin-bottom: 8px; }
-    .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; font-size: 11px; }
+    .sat-header { display: flex; justify-content: space-between; align-items: center; }
+    #satValDisplay { color: #5dade2; font-size: 10px; }
+    
+    /* Range Slider Styling - No Gaps */
+    input[type="range"] { -webkit-appearance: none; width: 100%; background: #333; height: 4px; border-radius: 2px; margin: 10px 0; outline: none; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: #5dade2; border-radius: 50%; cursor: pointer; }
+
+    select { background: #000; color: #fff; border: 1px solid #444; width: 100%; padding: 5px; border-radius: 4px; margin-bottom: 8px; font-size: 12px; }
+    .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 6px 0; font-size: 11px; }
     .switch { position: relative; width: 34px; height: 18px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #333; transition: .4s; border-radius: 20px; }
     .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background: #fff; transition: .4s; border-radius: 50%; }
     input:checked + .slider { background: #5dade2; }
     input:checked + .slider:before { transform: translateX(16px); }
-    
-    .detail-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .detail-val { color: #5dade2; font-weight: bold; }
-    #compassContainer { position: absolute; top: 70px; right: 12px; width: 45px; height: 45px; z-index: 1000; }
+
+    /* Compass & HUD Toggle */
+    #compassContainer { position: absolute; top: 20px; right: 20px; width: 50px; height: 50px; z-index: 1000; cursor: pointer; transition: transform 0.2s; }
+    #hudToggle { position: absolute; bottom: 40px; right: 20px; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; z-index: 1001; display: flex; justify-content: center; align-items: center; font-size: 20px; }
+
+    /* Info Bar Details */
+    .info-item { display: flex; justify-content: space-between; margin-bottom: 4px; color: #888; }
+    .info-val { color: #fff; font-weight: bold; }
+    #scaleBar { height: 2px; border: 1px solid #fff; border-top: none; width: 80px; margin-top: 5px; }
   </style>
 </head>
 <body>
 
   <div id="tokenOverlay">
     <div id="loginBox" class="glass-panel">
-      <h3 style="color:#5dade2; margin-top:0; letter-spacing: 2px;">RAILWAY MONITOR</h3>
-      <div class="token-hint">Authorization via <span style="color:#fff;">Cesium Ion Token</span> required.</div>
-      <input type="password" id="tokenInput" placeholder="PASTE ACCESS TOKEN">
-      <button id="startBtn">INITIALIZE</button>
+      <h3 style="color:#5dade2; letter-spacing: 2px;">RAILWAY MONITOR</h3>
+      <input type="password" id="tokenInput" placeholder="ENTER ACCESS TOKEN">
+      <button id="startBtn">ACCESS SYSTEM</button>
     </div>
   </div>
 
   <div id="cesiumContainer"></div>
+
+  <div id="searchBox">
+    <input type="text" id="searchInput" placeholder="🔍 Search Location (OSM)...">
+  </div>
+
+  <div id="compassContainer" title="Click to Reset North">
+    <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" stroke="#fff" stroke-width="1" fill="none" opacity="0.3"/><path d="M50,15 L60,50 L50,45 L40,50 Z" fill="#f1948a"/><path d="M50,85 L60,50 L50,55 L40,50 Z" fill="#5dade2"/></svg>
+  </div>
   <div id="hudToggle" class="glass-panel">🛰️</div>
   
   <div id="menu" class="glass-panel">
-    <div class="label">Display</div>
-    <div class="switch-container"><span>3D Buildings</span><label class="switch"><input type="checkbox" id="buildingToggle"><span class="slider"></span></label></div>
-    <div class="switch-container"><span>Terrain</span><label class="switch"><input type="checkbox" id="terrainToggle"><span class="slider"></span></label></div>
-    <div class="switch-container"><span>Day/Night</span><label class="switch"><input type="checkbox" id="lightToggle"><span class="slider"></span></label></div>
+    <div class="label">System Control</div>
+    <div class="switch-container"><span>Auto-Rotation</span><label class="switch"><input type="checkbox" id="rotateToggle"><span class="slider"></span></label></div>
+    <div class="switch-container"><span>Inspector Mode</span><label class="switch"><input type="checkbox" id="inspectToggle"><span class="slider"></span></label></div>
     
-    <div class="label">Color Saturation</div>
+    <div class="label">Display Layer</div>
+    <div class="switch-container"><span>3D Buildings</span><label class="switch"><input type="checkbox" id="buildingToggle"><span class="slider"></span></label></div>
+    <div class="switch-container"><span>3D Terrain</span><label class="switch"><input type="checkbox" id="terrainToggle"><span class="slider"></span></label></div>
+    <div class="switch-container"><span>Lighting</span><label class="switch"><input type="checkbox" id="lightToggle"><span class="slider"></span></label></div>
+
+    <div class="label sat-header"><span>Saturation</span><span id="satValDisplay">100%</span></div>
     <input type="range" id="satSlider" min="0" max="3" step="0.1" value="1.0">
 
-    <div class="label">Railway Layer</div>
+    <div class="label">Railway Map</div>
     <select id="railwaySelect">
       <option value="standard">Infrastructure</option>
       <option value="maxspeed">Max speeds</option>
       <option value="signals">Signalling</option>
-      <option value="gauge">Track Gauge</option>
+      <option value="gauge">Gauge</option>
     </select>
     
     <div class="label">Base Map</div>
@@ -99,42 +117,76 @@
   </div>
 
   <div id="infoBar" class="glass-panel">
-    <div id="timeVal" style="color:#5dade2; font-weight:bold; margin-bottom:5px;">00:00:00</div>
-    <div id="latVal">LAT: 0.00°</div>
-    <div id="lonVal">LON: 0.00°</div>
-    <div id="altVal">ALT: --</div>
+    <div class="info-item"><span style="color:#5dade2">SOLAR TIME</span><span id="timeVal" class="info-val">--:--:--</span></div>
+    <div class="info-item">TIMEZONE<span id="tzVal" class="info-val">UTC +0</span></div>
+    <div class="info-item">LATITUDE<span id="latVal" class="info-val">0.00°</span></div>
+    <div class="info-item">LONGITUDE<span id="lonVal" class="info-val">0.00°</span></div>
+    <div class="info-item">ALTITUDE<span id="altVal" class="info-val">--</span></div>
+    <div style="margin-top:10px;">
+      <div id="scaleLabel" style="font-size: 9px; color: #5dade2; font-weight: bold;">-- KM</div>
+      <div id="scaleBar"></div>
+    </div>
   </div>
 
   <div id="inspectorPanel" class="glass-panel">
-    <div id="closeInspector">×</div>
+    <div style="font-size:10px; color:#5dade2; border-bottom:1px solid #333; margin-bottom:10px;">OBJECT INSPECTOR</div>
     <div id="railDetailContent"></div>
   </div>
 
-  <div id="compassContainer"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" stroke="#fff" stroke-width="1" fill="none" opacity="0.3"/><path d="M50,15 L60,50 L50,45 L40,50 Z" fill="#f1948a"/><path d="M50,85 L60,50 L50,55 L40,50 Z" fill="#5dade2"/></svg></div>
-
   <script>
     const startBtn = document.getElementById('startBtn');
-    startBtn.addEventListener('click', () => {
+    startBtn.onclick = () => {
       const token = document.getElementById('tokenInput').value.trim();
       if (token) initSystem(token);
-    });
+    };
 
     async function initSystem(token) {
       Cesium.Ion.defaultAccessToken = token;
       try {
         const viewer = new Cesium.Viewer('cesiumContainer', {
-          baseLayerPicker: false, geocoder: false, homeButton: true, infoBox: false,
+          baseLayerPicker: false, geocoder: false, homeButton: false, infoBox: false,
           timeline: false, animation: false, baseLayer: false
         });
 
-        // HUD Toggle logic
-        document.getElementById('hudToggle').onclick = () => {
-          document.body.classList.toggle('hud-hidden');
-          document.getElementById('hudToggle').innerText = document.body.classList.contains('hud-hidden') ? "🌍" : "🛰️";
+        let baseLayer = null, railLayer = null, isRotating = false;
+
+        // 1. Compass Reset Function
+        document.getElementById('compassContainer').onclick = () => {
+          viewer.camera.flyTo({
+            destination: viewer.camera.position,
+            orientation: { heading: 0, pitch: viewer.camera.pitch, roll: viewer.camera.roll }
+          });
         };
 
-        let baseLayer = null, railLayer = null;
+        // 2. Saturation with Debounce & Label
+        const satSlider = document.getElementById('satSlider');
+        const satValDisplay = document.getElementById('satValDisplay');
+        let satTimeout;
+        satSlider.oninput = (e) => {
+          const val = e.target.value;
+          satValDisplay.innerText = `${Math.round(val * 100)}%`;
+          clearTimeout(satTimeout);
+          satTimeout = setTimeout(() => {
+            if (baseLayer) baseLayer.saturation = parseFloat(val);
+            if (railLayer) railLayer.saturation = parseFloat(val);
+          }, 200);
+        };
 
+        // 3. OSM Search
+        document.getElementById('searchInput').onkeypress = async (e) => {
+          if (e.key === 'Enter') {
+            const query = e.target.value;
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
+            const data = await res.json();
+            if (data.length > 0) {
+              viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(parseFloat(data[0].lon), parseFloat(data[0].lat), 5000)
+              });
+            }
+          }
+        };
+
+        // Layers Management
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
@@ -146,56 +198,63 @@
             case 'ion_sat': provider = await Cesium.createWorldImageryAsync(); break;
           }
           baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
-          applySaturation(); // 套用當前飽和度
+          baseLayer.saturation = parseFloat(satSlider.value);
         }
 
-        // 飽和度延遲處理 (Debounce)
-        let satTimeout;
-        const satSlider = document.getElementById('satSlider');
-        satSlider.oninput = () => {
-          clearTimeout(satTimeout);
-          satTimeout = setTimeout(() => applySaturation(), 200);
+        // HUD Toggle
+        document.getElementById('hudToggle').onclick = () => {
+          document.body.classList.toggle('hud-hidden');
         };
 
-        function applySaturation() {
-          const val = parseFloat(satSlider.value);
-          if (baseLayer) baseLayer.saturation = val;
-          if (railLayer) railLayer.saturation = val;
-        }
+        // Rotation Logic
+        viewer.scene.postUpdate.addEventListener(() => {
+          if (isRotating) viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, 0.001);
+        });
+        document.getElementById('rotateToggle').onchange = (e) => isRotating = e.target.checked;
 
-        function loadRailway(style) {
-          if (railLayer) viewer.imageryLayers.remove(railLayer);
-          railLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
-            url: `https://{s}.tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png`,
-            subdomains: ['a', 'b', 'c']
-          }));
-          applySaturation();
-        }
+        // Picking Logic (Inspector)
+        const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+        handler.setInputAction(async (click) => {
+          if (!document.getElementById('inspectToggle').checked) return;
+          const ray = viewer.camera.getPickRay(click.position);
+          const cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+          if (cartesian) {
+            const carto = Cesium.Cartographic.fromCartesian(cartesian);
+            document.getElementById('inspectorPanel').classList.add('active');
+            document.getElementById('railDetailContent').innerHTML = `Scanning coordinates...<br>LAT: ${Cesium.Math.toDegrees(carto.latitude).toFixed(4)}`;
+          }
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-        // UI Events
-        document.getElementById('baseSelect').onchange = (e) => updateBaseMap(e.target.value);
-        document.getElementById('railwaySelect').onchange = (e) => loadRailway(e.target.value);
-        document.getElementById('lightToggle').onchange = (e) => { viewer.scene.globe.enableLighting = e.target.checked; };
-        
-        let bld = null;
-        document.getElementById('buildingToggle').onchange = async (e) => {
-          if (e.target.checked) { if(!bld) bld = await Cesium.createOsmBuildingsAsync(); viewer.scene.primitives.add(bld); bld.show = true; }
-          else if(bld) bld.show = false;
-        };
-
-        // Initialization
-        document.getElementById('tokenOverlay').style.display = 'none';
-        await updateBaseMap('osm');
-        loadRailway('standard');
-
+        // UI Update Loop (Info Bar)
         viewer.scene.preRender.addEventListener(() => {
           const c = viewer.camera.positionCartographic;
           if (!c) return;
-          document.getElementById('latVal').innerText = `LAT: ${Cesium.Math.toDegrees(c.latitude).toFixed(2)}°`;
-          document.getElementById('lonVal').innerText = `LON: ${Cesium.Math.toDegrees(c.longitude).toFixed(2)}°`;
-          document.getElementById('altVal').innerText = `ALT: ${(c.height/1000).toFixed(0)}km`;
+          const lon = Cesium.Math.toDegrees(c.longitude);
+          const lat = Cesium.Math.toDegrees(c.latitude);
+          
+          document.getElementById('latVal').innerText = `${lat.toFixed(2)}°`;
+          document.getElementById('lonVal').innerText = `${lon.toFixed(2)}°`;
+          document.getElementById('altVal').innerText = `${(c.height/1000).toFixed(1)} km`;
+          
+          // Time & Timezone
+          const now = new Date();
+          const tz = Math.round(lon / 15);
+          document.getElementById('tzVal').innerText = `UTC ${tz >= 0 ? '+' : ''}${tz}`;
+          const solarMin = (now.getUTCHours()*60 + now.getUTCMinutes() + (lon/15)*60 + 1440) % 1440;
+          document.getElementById('timeVal').innerText = `${Math.floor(solarMin/60).toString().padStart(2,'0')}:${Math.floor(solarMin%60).toString().padStart(2,'0')}:${now.getUTCSeconds().toString().padStart(2,'0')}`;
+          
+          // Scale Bar Logic
+          const skm = (Math.tan(viewer.camera.frustum.fovy * 0.5) * c.height / viewer.canvas.clientHeight) * 160 / 1000;
+          document.getElementById('scaleLabel').innerText = skm > 1 ? `${skm.toFixed(1)} KM` : `${(skm*1000).toFixed(0)} M`;
+          
+          // Compass Rotation
           document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
         });
+
+        // Final Init
+        document.getElementById('tokenOverlay').style.display = 'none';
+        await updateBaseMap('osm');
+        document.getElementById('lightToggle').onchange = (e) => viewer.scene.globe.enableLighting = e.target.checked;
 
       } catch (e) { console.error(e); }
     }
