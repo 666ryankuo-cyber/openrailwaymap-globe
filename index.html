@@ -187,39 +187,37 @@
         let currentRailwayStyle = 'standard';
         let loadTimeout = null;
 
-        // --- 搜尋邏輯：使用 Ion Geocoder 並在完成後清空欄位 ---
+        // --- 重點修正：切換為 Cesium Ion Geocoder ---
         const ionGeocoder = new Cesium.IonGeocodeProvider();
         const searchInput = document.getElementById('searchInput');
 
         searchInput.addEventListener('keypress', async (e) => {
           if (e.key === 'Enter') {
-            const query = searchInput.value.trim();
+            const query = searchInput.value;
             if (!query) return;
             document.getElementById('status').innerText = "SEARCHING...";
 
             try {
+              // 使用官方 Geocoder，會自動包含 token，不產生 CORS 錯誤
               const results = await ionGeocoder.geocode(query);
               if (results && results.length > 0) {
                 viewer.camera.flyTo({
                   destination: results[0].destination,
                   duration: 2.5
                 });
-                
-                // --- 關鍵新增：搜尋成功後清空欄位並取消焦點 ---
-                searchInput.value = ""; 
-                searchInput.blur();
-                
                 document.getElementById('status').innerText = "NAVIGATED";
+                searchInput.blur();
               } else {
                 document.getElementById('status').innerText = "NOT FOUND";
               }
             } catch (err) {
+              console.error("Geocode Error:", err);
               document.getElementById('status').innerText = "SEARCH ERROR";
             }
           }
         });
 
-        // --- 底圖與鐵路圖層邏輯 (維持穩定版本) ---
+        // --- 底圖加載邏輯 (維持你原本的結構) ---
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
