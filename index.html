@@ -56,7 +56,6 @@
       width: var(--sidebar-width); 
     }
 
-    /* 側邊欄隱藏動畫 */
     .hud-hidden #menu, .hud-hidden #infoBar { transform: translateX(var(--sidebar-hide-offset)); opacity: 0; }
 
     #searchBox { margin-bottom: 15px; position: relative; }
@@ -188,13 +187,13 @@
         let currentRailwayStyle = 'standard';
         let loadTimeout = null;
 
-        // --- 核心更新：搜尋後字體消失指令 ---
+        // --- 搜尋邏輯：使用 Ion Geocoder 並在完成後清空欄位 ---
         const ionGeocoder = new Cesium.IonGeocodeProvider();
         const searchInput = document.getElementById('searchInput');
 
         searchInput.addEventListener('keypress', async (e) => {
           if (e.key === 'Enter') {
-            const query = searchInput.value;
+            const query = searchInput.value.trim();
             if (!query) return;
             document.getElementById('status').innerText = "SEARCHING...";
 
@@ -205,22 +204,22 @@
                   destination: results[0].destination,
                   duration: 2.5
                 });
-                document.getElementById('status').innerText = "NAVIGATED";
                 
-                // --- 這裡就是你要的指令：清空文字並取消焦點 ---
+                // --- 關鍵新增：搜尋成功後清空欄位並取消焦點 ---
                 searchInput.value = ""; 
                 searchInput.blur();
                 
+                document.getElementById('status').innerText = "NAVIGATED";
               } else {
                 document.getElementById('status').innerText = "NOT FOUND";
               }
             } catch (err) {
-              console.error("Geocode Error:", err);
               document.getElementById('status').innerText = "SEARCH ERROR";
             }
           }
         });
 
+        // --- 底圖與鐵路圖層邏輯 (維持穩定版本) ---
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
