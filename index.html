@@ -87,6 +87,10 @@
       <label class="switch"><input type="checkbox" id="terrainToggle"><span class="slider"></span></label>
     </div>
     <div class="switch-container">
+      <span style="font-size: 11px; color: #ccc;">Day/Night Cycle</span>
+      <label class="switch"><input type="checkbox" id="lightToggle"><span class="slider"></span></label>
+    </div>
+    <div class="switch-container">
       <span style="font-size: 11px; color: #ccc;">Rotation</span>
       <label class="switch"><input type="checkbox" id="rotateToggle"><span class="slider"></span></label>
     </div>
@@ -172,10 +176,10 @@
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
         };
 
+        // --- 旋轉邏輯 ---
         let isRotating = false;
         let lastTime = Date.now();
         const rotateToggle = document.getElementById('rotateToggle');
-
         rotateToggle.addEventListener('change', (e) => {
           isRotating = e.target.checked;
           document.getElementById('status').innerText = isRotating ? "ROTATION ACTIVE" : "MANUAL CONTROL";
@@ -190,42 +194,49 @@
           } else { lastTime = Date.now(); }
         });
 
+        // --- 底圖與日照邏輯 ---
         let baseLayer = null, railwayLayer = null;
         const satRange = document.getElementById('satRange');
         const satValueDisplay = document.getElementById('satValue');
+        const lightToggle = document.getElementById('lightToggle');
         let satTimeout = null;
+
+        // 獨立監聽日照開關
+        lightToggle.addEventListener('change', (e) => {
+          viewer.scene.globe.enableLighting = e.target.checked;
+          viewer.scene.requestRender();
+        });
 
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
-          viewer.scene.globe.enableLighting = false;
           
           if (type === 'osm') provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
           else if (type === 'bing_aerial') provider = await Cesium.createWorldImageryAsync({ style: Cesium.IonWorldImageryStyle.AERIAL });
           else if (type === 'sentinel') provider = await Cesium.IonImageryProvider.fromAssetId(2);
-          else if (type === 'dark') {
-            provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer');
-            viewer.scene.globe.enableLighting = true; 
-          } else provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
+          else if (type === 'dark') provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer');
+          else provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
           
           baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
           baseLayer.saturation = satRange.value / 100;
-          viewer.scene.requestRender(); // 切換地圖也立刻渲染
+          
+          // 如果換到底圖是 Dark 模式，自動幫使用者勾選日照（可選邏輯）
+          if (type === 'dark' && !lightToggle.checked) {
+            lightToggle.checked = true;
+            viewer.scene.globe.enableLighting = true;
+          }
+          
+          viewer.scene.requestRender();
         }
 
-        // --- 優化後的飽和度滑動邏輯 ---
+        // 飽和度優化
         satRange.addEventListener('input', (e) => {
           const val = e.target.value;
           satValueDisplay.innerText = val + "%";
-          
           if (baseLayer) {
             baseLayer.saturation = val / 100;
-            
-            // 使用防抖機制（Debounce）並觸發渲染
             if (satTimeout) clearTimeout(satTimeout);
-            satTimeout = setTimeout(() => {
-              viewer.scene.requestRender(); 
-            }, 50); // 50ms 的小延遲，平衡反應速度與流暢度
+            satTimeout = setTimeout(() => { viewer.scene.requestRender(); }, 50);
           }
         });
 
@@ -238,6 +249,7 @@
           setTimeout(() => { if (old) viewer.imageryLayers.remove(old); viewer.scene.requestRender(); }, 600);
         }
 
+        // --- 其餘 UI 控制 ---
         document.getElementById('baseSelect').addEventListener('change', (e) => updateBaseMap(e.target.value));
         document.getElementById('railwaySelect').addEventListener('change', (e) => executeRailwayLoading(e.target.value));
 
