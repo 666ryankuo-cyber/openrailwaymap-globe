@@ -25,7 +25,7 @@
     
     :root { --sidebar-width: 220px; }
 
-    /* HUD 隱藏時的狀態 */
+    /* HUD 狀態控制 */
     .hud-hidden #menu { transform: translateX(-300px); opacity: 0; }
     .hud-hidden #infoBar { transform: translateX(-300px); opacity: 0; }
     .hud-hidden #inspectorPanel { transform: translateX(-600px); opacity: 0; }
@@ -33,7 +33,7 @@
     #menu { position: absolute; top: 20px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; }
     #infoBar { position: absolute; bottom: 40px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); font-size: 11px; z-index: 1000; }
     
-    /* 獨立鐵路資訊欄 */
+    /* 獨立鐵路資訊欄 (向左淡出) */
     #inspectorPanel { 
       position: absolute; bottom: 40px; left: 250px; 
       padding: 15px; border-radius: 12px; width: 260px; 
@@ -41,11 +41,10 @@
       transform: translateX(-20px); z-index: 999;
     }
     #inspectorPanel.active { opacity: 1; visibility: visible; pointer-events: auto; transform: translateX(0); }
-    
     #closeInspector { position: absolute; right: 10px; top: 10px; cursor: pointer; color: #5dade2; font-size: 18px; font-weight: bold; padding: 2px 6px; }
 
-    /* 指向針 */
-    #compassContainer { position: absolute; top: 120px; right: 12px; width: 45px; height: 45px; z-index: 1000; cursor: pointer; }
+    /* 指向針：適度上移 */
+    #compassContainer { position: absolute; top: 70px; right: 12px; width: 45px; height: 45px; z-index: 1000; cursor: pointer; transition: transform 0.1s linear; }
 
     /* 右下角 HUD 切換鈕 */
     #hudToggle {
@@ -53,11 +52,10 @@
       width: 48px; height: 48px; border-radius: 50%;
       cursor: pointer; z-index: 1001;
       display: flex; justify-content: center; align-items: center;
-      font-size: 20px;
-      user-select: none;
+      font-size: 20px; user-select: none;
     }
 
-    /* 通用樣式 */
+    /* 文字與表單樣式 */
     .label { font-size: 10px; margin-top: 12px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid rgba(93, 173, 226, 0.3); }
     select { background: #000; color: #fff; border: 1px solid #444; padding: 6px; width: 100%; border-radius: 4px; font-size: 12px; margin-bottom: 8px; }
     .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; font-size: 11px; }
@@ -148,32 +146,44 @@
       Cesium.Ion.defaultAccessToken = token;
       try {
         const viewer = new Cesium.Viewer('cesiumContainer', {
-          baseLayerPicker: false, geocoder: true, homeButton: true,
-          sceneModePicker: true, navigationHelpButton: true,
-          infoBox: false, selectionIndicator: false, requestRenderMode: true, baseLayer: false
+          // 只保留 Home 與全螢幕
+          homeButton: true,
+          fullscreenButton: true,
+          // 關閉其他預設按鈕
+          baseLayerPicker: false,
+          geocoder: false,
+          sceneModePicker: false,
+          navigationHelpButton: false,
+          infoBox: false,
+          selectionIndicator: false,
+          timeline: false,
+          animation: false,
+          requestRenderMode: true,
+          baseLayer: false
         });
 
         // --- HUD 切換邏輯 ---
         const hudToggle = document.getElementById('hudToggle');
         hudToggle.addEventListener('click', () => {
           document.body.classList.toggle('hud-hidden');
-          // 切換圖示：隱藏時顯示地球，開啟時顯示衛星
           hudToggle.innerText = document.body.classList.contains('hud-hidden') ? "🌍" : "🛰️";
         });
 
-        // --- 自定義 Home 鍵：回到當前位置的高空 ---
+        // --- Home 鍵：回到當前位置的高空預設 ---
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
           e.cancel = true; 
           const currentPos = viewer.camera.positionCartographic;
           viewer.camera.flyTo({
             destination: Cesium.Cartesian3.fromDegrees(
-              Cesium.Math.toDegrees(currentPos.longitude), Cesium.Math.toDegrees(currentPos.latitude), 15000000.0
+              Cesium.Math.toDegrees(currentPos.longitude), 
+              Cesium.Math.toDegrees(currentPos.latitude), 
+              15000000.0
             ),
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
           });
         });
 
-        // --- 基礎圖層控制 ---
+        // --- 圖層控制 ---
         let baseLayer = null, railwayLayer = null;
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
@@ -194,7 +204,7 @@
           viewer.scene.requestRender();
         }
 
-        // --- 鐵路資訊欄 ---
+        // --- 鐵路資訊欄功能 ---
         const inspectToggle = document.getElementById('inspectToggle');
         const inspectorPanel = document.getElementById('inspectorPanel');
         const detailContent = document.getElementById('railDetailContent');
@@ -203,7 +213,7 @@
 
         closeBtn.addEventListener('click', () => {
           inspectorPanel.classList.remove('active');
-          setTimeout(() => { detailContent.innerHTML = ""; }, 300); // 刪除存取的資訊
+          setTimeout(() => { detailContent.innerHTML = ""; }, 300);
         });
 
         const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
@@ -243,7 +253,7 @@
           }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-        // --- 旋轉與更新 ---
+        // --- 旋轉與 UI 更新 ---
         let isRotating = false;
         let lastTime = Date.now();
         viewer.scene.postUpdate.addEventListener(() => {
@@ -281,7 +291,7 @@
           else if(bld) bld.show = false; viewer.scene.requestRender();
         });
 
-        // 初始化
+        // 系統啟動
         document.getElementById('tokenOverlay').style.display = 'none';
         await updateBaseMap('osm');
         loadRailway('standard');
