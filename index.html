@@ -96,9 +96,9 @@
     
     <div class="label">Base Map</div>
     <select id="baseSelect">
+      <option value="osm">OpenStreetMap (Endonyms)</option>
       <option value="arcgis_gray">ArcGIS Gray (Neutral)</option>
       <option value="dark">ArcGIS Midnight (Dark)</option>
-      <option value="osm">OpenStreetMap (Detail)</option>
       <option value="bing_aerial">Satellite (Bing)</option>
       <option value="sentinel">Satellite (Sentinel-2)</option>
     </select>
@@ -157,19 +157,14 @@
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
         };
 
-        // --- 旋轉模式邏輯 (已修改：移除飛回動作，直接原地旋轉) ---
+        // --- 旋轉模式邏輯 ---
         let isRotating = false;
         let lastTime = Date.now();
         const rotateToggle = document.getElementById('rotateToggle');
 
         rotateToggle.addEventListener('change', (e) => {
           isRotating = e.target.checked;
-          if (isRotating) {
-            document.getElementById('status').innerText = "ROTATION ACTIVE";
-            lastTime = Date.now(); // 確保開始時間同步
-          } else {
-            document.getElementById('status').innerText = "MANUAL CONTROL";
-          }
+          document.getElementById('status').innerText = isRotating ? "ROTATION ACTIVE" : "MANUAL CONTROL";
         });
 
         viewer.scene.postUpdate.addEventListener(() => {
@@ -177,27 +172,22 @@
             const now = Date.now();
             const delta = (now - lastTime) / 1000.0;
             lastTime = now;
-            // 繞 Z 軸旋轉 (速度可調整 0.05 為慢速旋轉)
             viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, 0.05 * delta);
           } else { 
             lastTime = Date.now(); 
           }
         });
 
-        // --- 遙測與比例尺更新功能 ---
+        // --- 遙測更新功能 ---
         function updateTelemetry() {
           const camera = viewer.camera;
           const carto = camera.positionCartographic;
           if (!carto) return;
-
           const lonDeg = Cesium.Math.toDegrees(carto.longitude);
           const latDeg = Cesium.Math.toDegrees(carto.latitude);
-          
           document.getElementById('latVal').innerText = latDeg.toFixed(2) + "°";
           document.getElementById('lonVal').innerText = lonDeg.toFixed(2) + "°";
           document.getElementById('altVal').innerText = (carto.height/1000).toFixed(1) + "km";
-
-          // Solar Time
           const now = new Date();
           const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
           const offsetMinutes = (lonDeg / 15) * 60; 
@@ -206,25 +196,17 @@
           const sM = Math.floor(solarTotalMinutes % 60).toString().padStart(2, '0');
           const sS = now.getUTCSeconds().toString().padStart(2, '0');
           document.getElementById('timeVal').innerText = `${sH}:${sM}:${sS}`;
-
-          // UTC Zone
           const zone = (lonDeg / 15).toFixed(1);
           document.getElementById('zoneVal').innerText = "UTC" + (zone >= 0 ? "+" : "") + zone;
-
-          // Scale Bar Logic
           const width = viewer.canvas.clientWidth;
           const height = carto.height;
           const visibleWidth = 2 * Math.tan(Cesium.Math.toRadians(30)) * height;
           const scaleKm = (visibleWidth / width) * 80 / 1000; 
-          
-          let scaleText;
-          if (scaleKm > 1000) scaleText = (scaleKm/1000).toFixed(1) + "k KM";
-          else if (scaleKm > 1) scaleText = scaleKm.toFixed(1) + " KM";
-          else scaleText = (scaleKm*1000).toFixed(0) + " M";
+          let scaleText = scaleKm > 1000 ? (scaleKm/1000).toFixed(1) + "k KM" : (scaleKm > 1 ? scaleKm.toFixed(1) + " KM" : (scaleKm*1000).toFixed(0) + " M");
           document.getElementById('scaleLabel').innerText = scaleText;
         }
 
-        // --- 地圖導覽與功能按鈕 ---
+        // --- 導覽功能 ---
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
             e.cancel = true;
             const ray = viewer.camera.getPickRay(new Cesium.Cartesian2(viewer.canvas.clientWidth / 2, viewer.canvas.clientHeight / 2));
@@ -251,7 +233,7 @@
         let baseLayer = null, railwayLayer = null, osmBuildings = null, worldTerrain = null;
         const flatTerrain = new Cesium.EllipsoidTerrainProvider();
 
-        // 搜尋功能邏輯
+        // 搜尋功能
         const searchInput = document.getElementById('searchInput');
         searchInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
@@ -272,7 +254,7 @@
           }
         });
 
-        // 圖層控制
+        // 選項切換
         document.getElementById('buildingToggle').addEventListener('change', async (e) => {
           if (e.target.checked) {
             if (!osmBuildings) {
@@ -289,17 +271,24 @@
           } else viewer.terrainProvider = flatTerrain;
         });
 
+        // --- 底圖更新邏輯 (預設改為 OSM) ---
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
           viewer.scene.globe.enableLighting = false;
-          if (type === 'bing_aerial') provider = await Cesium.createWorldImageryAsync({ style: Cesium.IonWorldImageryStyle.AERIAL });
-          else if (type === 'sentinel') provider = await Cesium.IonImageryProvider.fromAssetId(2);
-          else if (type === 'dark') {
+          
+          if (type === 'osm') {
+            provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
+          } else if (type === 'bing_aerial') {
+            provider = await Cesium.createWorldImageryAsync({ style: Cesium.IonWorldImageryStyle.AERIAL });
+          } else if (type === 'sentinel') {
+            provider = await Cesium.IonImageryProvider.fromAssetId(2);
+          } else if (type === 'dark') {
             provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer');
             viewer.scene.globe.enableLighting = true; 
-          } else if (type === 'osm') provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
-          else provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
+          } else {
+            provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
+          }
           baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
         }
 
@@ -315,11 +304,11 @@
         document.getElementById('baseSelect').addEventListener('change', (e) => updateBaseMap(e.target.value));
         document.getElementById('railwaySelect').addEventListener('change', (e) => executeRailwayLoading(e.target.value));
 
-        await updateBaseMap('arcgis_gray');
+        // --- 初始化執行 ---
+        await updateBaseMap('osm'); // 預設改為 OSM
         executeRailwayLoading('standard');
         viewer.camera.setView(initialNeutralView);
 
-        // 每幀監聽更新
         viewer.scene.preRender.addEventListener(() => {
           document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
           updateTelemetry();
