@@ -37,7 +37,7 @@
     .label { font-size: 10px; margin-top: 8px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; }
     select { background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid #555; padding: 6px; width: 100%; border-radius: 6px; font-size: 12px; cursor: pointer; margin-bottom: 8px; }
     
-    .switch-container { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; margin-bottom: 5px; }
+    .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; }
     .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 20px; }
@@ -100,7 +100,7 @@
     </select>
   </div>
 
-  <div id="compassContainer" class="glass-panel">
+  <div id="compassContainer" class="glass-panel" title="Reset North & Pitch">
     <svg id="compassSvg" viewBox="0 0 100 100">
       <circle cx="50" cy="50" r="45" stroke="#fff" stroke-width="1.5" fill="none" opacity="0.2"/>
       <path d="M50,15 L62,50 L50,45 L38,50 Z" fill="#f1948a"/>
@@ -148,14 +148,29 @@
           baseLayer: false
         });
 
-        // --- 中立 Home 鍵設定 ---
         const neutralView = {
             destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0),
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
         };
+
+        // --- 中立 Home 鍵 ---
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
             e.cancel = true;
             viewer.camera.flyTo(neutralView);
+        });
+
+        // --- 自製指向針：一鍵恢復正北與垂直 ---
+        document.getElementById('compassContainer').addEventListener('click', () => {
+          viewer.camera.flyTo({
+            destination: viewer.camera.position, // 保持當前位置
+            orientation: {
+              heading: Cesium.Math.toRadians(0), // 轉向正北
+              pitch: Cesium.Math.toRadians(-90), // 垂直向下
+              roll: 0
+            },
+            duration: 1.5
+          });
+          document.getElementById('status').innerText = "NORTH ALIGNED";
         });
 
         document.getElementById('tokenOverlay').style.display = 'none';
@@ -163,12 +178,10 @@
         const scene = viewer.scene;
         let baseLayer = null;
         let railwayLayer = null;
-        let currentRailwayStyle = 'standard';
         let osmBuildings = null;
-        let worldTerrain = null; // 快取地形數據
-        const flatTerrain = new Cesium.EllipsoidTerrainProvider(); // 快取平坦地圖
+        let worldTerrain = null;
+        const flatTerrain = new Cesium.EllipsoidTerrainProvider();
 
-        // 搜尋邏輯
         const searchInput = document.getElementById('searchInput');
         searchInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
@@ -192,7 +205,6 @@
           }
         });
 
-        // 3D 建築開關
         document.getElementById('buildingToggle').addEventListener('change', async (e) => {
           if (e.target.checked) {
             if (!osmBuildings) {
@@ -204,7 +216,6 @@
           } else { if(osmBuildings) osmBuildings.show = false; document.getElementById('status').innerText = "3D BUILDINGS OFF"; }
         });
 
-        // --- 3D 地形開關邏輯 ---
         document.getElementById('terrainToggle').addEventListener('change', async (e) => {
           if (e.target.checked) {
             if (!worldTerrain) {
@@ -215,11 +226,10 @@
             document.getElementById('status').innerText = "TERRAIN ACTIVE";
           } else {
             viewer.terrainProvider = flatTerrain;
-            document.getElementById('status').innerText = "TERRAIN OFF (FLAT)";
+            document.getElementById('status').innerText = "TERRAIN OFF";
           }
         });
 
-        // 圖層切換
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
@@ -253,11 +263,9 @@
 
         document.getElementById('baseSelect').addEventListener('change', (e) => updateBaseMap(e.target.value));
         document.getElementById('railwaySelect').addEventListener('change', (e) => {
-          currentRailwayStyle = e.target.value;
-          executeRailwayLoading(currentRailwayStyle);
+          executeRailwayLoading(e.target.value);
         });
 
-        // 啟動初始化
         await updateBaseMap('arcgis_gray');
         executeRailwayLoading('standard');
         viewer.camera.setView(neutralView);
