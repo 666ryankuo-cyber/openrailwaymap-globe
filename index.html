@@ -56,7 +56,6 @@
       width: var(--sidebar-width); 
     }
 
-    /* 統一向左隱藏動畫 */
     .hud-hidden #menu, .hud-hidden #infoBar { transform: translateX(var(--sidebar-hide-offset)); opacity: 0; }
 
     #searchBox { margin-bottom: 15px; position: relative; }
@@ -188,43 +187,49 @@
         let currentRailwayStyle = 'standard';
         let loadTimeout = null;
 
-        // --- 修正後的搜尋邏輯 (處理 CORS 與 User-Agent) ---
+        // --- 重點修正：切換為 Cesium Ion Geocoder ---
+        const ionGeocoder = new Cesium.IonGeocodeProvider();
         const searchInput = document.getElementById('searchInput');
-        searchInput.addEventListener('keypress', (e) => {
+
+        searchInput.addEventListener('keypress', async (e) => {
           if (e.key === 'Enter') {
             const query = searchInput.value;
             if (!query) return;
             document.getElementById('status').innerText = "SEARCHING...";
 
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`, {
-              headers: { 'Accept': 'application/json', 'User-Agent': 'RailwayGISMonitor/1.0' }
-            })
-            .then(res => res.json())
-            .then(data => {
-              if (data.length > 0) {
+            try {
+              // 使用官方 Geocoder，會自動包含 token，不產生 CORS 錯誤
+              const results = await ionGeocoder.geocode(query);
+              if (results && results.length > 0) {
                 viewer.camera.flyTo({
-                  destination: Cesium.Cartesian3.fromDegrees(parseFloat(data[0].lon), parseFloat(data[0].lat), 5000.0),
-                  duration: 2.0
+                  destination: results[0].destination,
+                  duration: 2.5
                 });
                 document.getElementById('status').innerText = "NAVIGATED";
                 searchInput.blur();
-              } else { document.getElementById('status').innerText = "NOT FOUND"; }
-            })
-            .catch(() => { document.getElementById('status').innerText = "CORS BLOCKED"; });
+              } else {
+                document.getElementById('status').innerText = "NOT FOUND";
+              }
+            } catch (err) {
+              console.error("Geocode Error:", err);
+              document.getElementById('status').innerText = "SEARCH ERROR";
+            }
           }
         });
 
-        // --- 修正後的底圖邏輯 (解決 1.107 棄用警告) ---
+        // --- 底圖加載邏輯 (維持你原本的結構) ---
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
-          if (type === 'bing_aerial') provider = await Cesium.createWorldImageryAsync({ style: Cesium.IonWorldImageryStyle.AERIAL });
-          else if (type === 'osm') provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
-          else if (type === 'blue_marble') provider = await Cesium.IonImageryProvider.fromAssetId(3845);
-          else if (type === 'black_marble') provider = await Cesium.IonImageryProvider.fromAssetId(3812);
-          else provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
-          
-          baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
+          try {
+            if (type === 'bing_aerial') provider = await Cesium.createWorldImageryAsync({ style: Cesium.IonWorldImageryStyle.AERIAL });
+            else if (type === 'osm') provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
+            else if (type === 'blue_marble') provider = await Cesium.IonImageryProvider.fromAssetId(3845);
+            else if (type === 'black_marble') provider = await Cesium.IonImageryProvider.fromAssetId(3812);
+            else provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
+            
+            baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
+          } catch(e) { console.warn(e); }
         }
 
         function executeRailwayLoading(style) {
