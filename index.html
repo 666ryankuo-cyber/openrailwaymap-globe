@@ -56,6 +56,7 @@
       width: var(--sidebar-width); 
     }
 
+    /* 統一向左隱藏動畫 */
     .hud-hidden #menu, .hud-hidden #infoBar { transform: translateX(var(--sidebar-hide-offset)); opacity: 0; }
 
     #searchBox { margin-bottom: 15px; position: relative; }
@@ -187,49 +188,43 @@
         let currentRailwayStyle = 'standard';
         let loadTimeout = null;
 
-        // --- 核心更新：使用 Cesium Ion 內建 Geocoder (解決 CORS) ---
-        const geocoder = new Cesium.IonGeocodeProvider();
+        // --- 修正後的搜尋邏輯 (處理 CORS 與 User-Agent) ---
         const searchInput = document.getElementById('searchInput');
-
-        searchInput.addEventListener('keypress', async (e) => {
+        searchInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
             const query = searchInput.value;
             if (!query) return;
             document.getElementById('status').innerText = "SEARCHING...";
 
-            try {
-              // 使用 Cesium 官方內建的搜尋方法
-              const results = await geocoder.geocode(query);
-              if (results && results.length > 0) {
-                const destination = results[0].destination;
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`, {
+              headers: { 'Accept': 'application/json', 'User-Agent': 'RailwayGISMonitor/1.0' }
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (data.length > 0) {
                 viewer.camera.flyTo({
-                  destination: destination,
-                  duration: 2.5
+                  destination: Cesium.Cartesian3.fromDegrees(parseFloat(data[0].lon), parseFloat(data[0].lat), 5000.0),
+                  duration: 2.0
                 });
                 document.getElementById('status').innerText = "NAVIGATED";
                 searchInput.blur();
-              } else {
-                document.getElementById('status').innerText = "NOT FOUND";
-              }
-            } catch (err) {
-              console.error("Geocoding failed:", err);
-              document.getElementById('status').innerText = "API ERROR";
-            }
+              } else { document.getElementById('status').innerText = "NOT FOUND"; }
+            })
+            .catch(() => { document.getElementById('status').innerText = "CORS BLOCKED"; });
           }
         });
 
+        // --- 修正後的底圖邏輯 (解決 1.107 棄用警告) ---
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
-          try {
-            if (type === 'bing_aerial') provider = await Cesium.createWorldImageryAsync({ style: Cesium.IonWorldImageryStyle.AERIAL });
-            else if (type === 'osm') provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
-            else if (type === 'blue_marble') provider = await Cesium.IonImageryProvider.fromAssetId(3845);
-            else if (type === 'black_marble') provider = await Cesium.IonImageryProvider.fromAssetId(3812);
-            else provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
-            
-            baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
-          } catch(e) { console.warn("Imagery fail:", e); }
+          if (type === 'bing_aerial') provider = await Cesium.createWorldImageryAsync({ style: Cesium.IonWorldImageryStyle.AERIAL });
+          else if (type === 'osm') provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
+          else if (type === 'blue_marble') provider = await Cesium.IonImageryProvider.fromAssetId(3845);
+          else if (type === 'black_marble') provider = await Cesium.IonImageryProvider.fromAssetId(3812);
+          else provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
+          
+          baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
         }
 
         function executeRailwayLoading(style) {
@@ -299,7 +294,7 @@
 
         executeRailwayLoading('standard');
 
-      } catch (e) { console.error("Critical Error:", e); }
+      } catch (e) { console.error(e); }
     }
   </script>
 </body>
