@@ -18,10 +18,29 @@
       box-sizing: border-box; 
     }
 
-    #tokenOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 9999; background: #000; }
-    #loginBox { padding: 40px; border-radius: 12px; width: 320px; text-align: center; border: 1px solid #333; }
-    #tokenInput { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #444; background: #111; color: #fff; outline: none; }
-    #startBtn { background: #5dade2; color: #fff; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
+    /* Token 輸入欄位置中強化 */
+    #tokenOverlay { 
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+      display: flex; justify-content: center; align-items: center; 
+      z-index: 9999; background: #000; 
+    }
+    #loginBox { 
+      padding: 40px; border-radius: 12px; width: 340px; 
+      text-align: center; border: 1px solid #333;
+      display: flex; flex-direction: column; align-items: center; /* 內部元素置中 */
+    }
+    #tokenInput { 
+      width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; 
+      border: 1px solid #444; background: #111; color: #fff; 
+      outline: none; text-align: center; /* 輸入文字也置中 */
+      box-sizing: border-box;
+    }
+    #startBtn { 
+      background: #5dade2; color: #fff; border: none; padding: 12px 24px; 
+      border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; 
+      transition: background 0.2s;
+    }
+    #startBtn:hover { background: #3498db; }
     
     :root { --sidebar-width: 220px; }
 
@@ -33,7 +52,7 @@
     #menu { position: absolute; top: 20px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; }
     #infoBar { position: absolute; bottom: 40px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); font-size: 11px; z-index: 1000; }
     
-    /* 獨立鐵路資訊欄 (向左淡出) */
+    /* 獨立鐵路資訊欄 */
     #inspectorPanel { 
       position: absolute; bottom: 40px; left: 250px; 
       padding: 15px; border-radius: 12px; width: 260px; 
@@ -43,7 +62,7 @@
     #inspectorPanel.active { opacity: 1; visibility: visible; pointer-events: auto; transform: translateX(0); }
     #closeInspector { position: absolute; right: 10px; top: 10px; cursor: pointer; color: #5dade2; font-size: 18px; font-weight: bold; padding: 2px 6px; }
 
-    /* 指向針：適度上移 */
+    /* 指向針 */
     #compassContainer { position: absolute; top: 70px; right: 12px; width: 45px; height: 45px; z-index: 1000; cursor: pointer; transition: transform 0.1s linear; }
 
     /* 右下角 HUD 切換鈕 */
@@ -78,8 +97,8 @@
 
   <div id="tokenOverlay">
     <div id="loginBox" class="glass-panel">
-      <h3 style="color:#5dade2; margin-top:0;">RAILWAY MONITOR</h3>
-      <input type="password" id="tokenInput" placeholder="Cesium Ion Token">
+      <h3 style="color:#5dade2; margin-top:0; letter-spacing: 2px;">RAILWAY MONITOR</h3>
+      <input type="password" id="tokenInput" placeholder="ENTER ION TOKEN">
       <button id="startBtn">ACCESS SYSTEM</button>
     </div>
   </div>
@@ -146,10 +165,8 @@
       Cesium.Ion.defaultAccessToken = token;
       try {
         const viewer = new Cesium.Viewer('cesiumContainer', {
-          // 只保留 Home 與全螢幕
           homeButton: true,
           fullscreenButton: true,
-          // 關閉其他預設按鈕
           baseLayerPicker: false,
           geocoder: false,
           sceneModePicker: false,
@@ -162,28 +179,26 @@
           baseLayer: false
         });
 
-        // --- HUD 切換邏輯 ---
+        // --- HUD 切換 ---
         const hudToggle = document.getElementById('hudToggle');
         hudToggle.addEventListener('click', () => {
           document.body.classList.toggle('hud-hidden');
           hudToggle.innerText = document.body.classList.contains('hud-hidden') ? "🌍" : "🛰️";
         });
 
-        // --- Home 鍵：回到當前位置的高空預設 ---
+        // --- Home 鍵回歸 ---
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
           e.cancel = true; 
           const currentPos = viewer.camera.positionCartographic;
           viewer.camera.flyTo({
             destination: Cesium.Cartesian3.fromDegrees(
-              Cesium.Math.toDegrees(currentPos.longitude), 
-              Cesium.Math.toDegrees(currentPos.latitude), 
-              15000000.0
+              Cesium.Math.toDegrees(currentPos.longitude), Cesium.Math.toDegrees(currentPos.latitude), 15000000.0
             ),
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
           });
         });
 
-        // --- 圖層控制 ---
+        // --- 地圖控制 ---
         let baseLayer = null, railwayLayer = null;
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
@@ -204,7 +219,7 @@
           viewer.scene.requestRender();
         }
 
-        // --- 鐵路資訊欄功能 ---
+        // --- 點擊檢測 ---
         const inspectToggle = document.getElementById('inspectToggle');
         const inspectorPanel = document.getElementById('inspectorPanel');
         const detailContent = document.getElementById('railDetailContent');
@@ -227,11 +242,9 @@
             const lon = Cesium.Math.toDegrees(carto.longitude);
             const height = viewer.camera.positionCartographic.height;
             const radius = Math.max(25, Math.min(800, height * 0.05));
-
             isQuerying = true;
             inspectorPanel.classList.add('active');
             detailContent.innerHTML = '<div style="color:#5dade2; font-size:10px; padding:10px;">📡 LINKING...</div>';
-
             const query = `[out:json][timeout:10];way["railway"](around:${radius.toFixed(0)},${lat},${lon});out tags;`;
             try {
               const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
@@ -245,15 +258,13 @@
                   <div class="detail-row"><span class="detail-key">Voltage</span><span class="detail-val">${t.voltage || '--'}</span></div>
                   <div class="detail-row"><span class="detail-key">Usage</span><span class="detail-val">${t.usage || '--'}</span></div>
                 `;
-              } else {
-                detailContent.innerHTML = `<div style="color:#888; font-size:10px; padding:10px;">Target not found.</div>`;
-              }
+              } else { detailContent.innerHTML = `<div style="color:#888; font-size:10px; padding:10px;">Target not found.</div>`; }
             } catch (e) { detailContent.innerHTML = '<div style="color:#f1948a; font-size:10px; padding:10px;">Timeout.</div>'; }
             finally { isQuerying = false; }
           }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-        // --- 旋轉與 UI 更新 ---
+        // --- 更新循環 ---
         let isRotating = false;
         let lastTime = Date.now();
         viewer.scene.postUpdate.addEventListener(() => {
@@ -280,7 +291,7 @@
           document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
         }
 
-        // --- 監聽事件 ---
+        // --- 綁定 ---
         document.getElementById('baseSelect').addEventListener('change', (e) => updateBaseMap(e.target.value));
         document.getElementById('railwaySelect').addEventListener('change', (e) => loadRailway(e.target.value));
         document.getElementById('rotateToggle').addEventListener('change', (e) => isRotating = e.target.checked);
@@ -291,7 +302,6 @@
           else if(bld) bld.show = false; viewer.scene.requestRender();
         });
 
-        // 系統啟動
         document.getElementById('tokenOverlay').style.display = 'none';
         await updateBaseMap('osm');
         loadRailway('standard');
