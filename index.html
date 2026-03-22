@@ -56,7 +56,6 @@
       width: var(--sidebar-width); 
     }
 
-    /* 統一向左隱藏動畫 */
     .hud-hidden #menu, .hud-hidden #infoBar { transform: translateX(var(--sidebar-hide-offset)); opacity: 0; }
 
     #searchBox { margin-bottom: 15px; position: relative; }
@@ -188,7 +187,7 @@
         let currentRailwayStyle = 'standard';
         let loadTimeout = null;
 
-        // --- 修正後的搜尋邏輯 (處理 CORS 與 User-Agent) ---
+        // --- 搜尋邏輯 (已加入清空指令) ---
         const searchInput = document.getElementById('searchInput');
         searchInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
@@ -207,14 +206,21 @@
                   duration: 2.0
                 });
                 document.getElementById('status').innerText = "NAVIGATED";
-                searchInput.blur();
-              } else { document.getElementById('status').innerText = "NOT FOUND"; }
+                
+                // --- 這裡就是你要的功能 ---
+                searchInput.value = ""; // 清空輸入框
+                searchInput.blur();    // 讓輸入框失去焦點（收起手機鍵盤）
+                
+              } else { 
+                document.getElementById('status').innerText = "NOT FOUND"; 
+              }
             })
-            .catch(() => { document.getElementById('status').innerText = "CORS BLOCKED"; });
+            .catch(() => { 
+              document.getElementById('status').innerText = "CORS BLOCKED"; 
+            });
           }
         });
 
-        // --- 修正後的底圖邏輯 (解決 1.107 棄用警告) ---
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
