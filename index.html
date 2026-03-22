@@ -56,6 +56,7 @@
       width: var(--sidebar-width); 
     }
 
+    /* 側邊欄隱藏動畫 */
     .hud-hidden #menu, .hud-hidden #infoBar { transform: translateX(var(--sidebar-hide-offset)); opacity: 0; }
 
     #searchBox { margin-bottom: 15px; position: relative; }
@@ -187,7 +188,7 @@
         let currentRailwayStyle = 'standard';
         let loadTimeout = null;
 
-        // --- 重點修正：切換為 Cesium Ion Geocoder ---
+        // --- 核心更新：搜尋後字體消失指令 ---
         const ionGeocoder = new Cesium.IonGeocodeProvider();
         const searchInput = document.getElementById('searchInput');
 
@@ -198,7 +199,6 @@
             document.getElementById('status').innerText = "SEARCHING...";
 
             try {
-              // 使用官方 Geocoder，會自動包含 token，不產生 CORS 錯誤
               const results = await ionGeocoder.geocode(query);
               if (results && results.length > 0) {
                 viewer.camera.flyTo({
@@ -206,7 +206,11 @@
                   duration: 2.5
                 });
                 document.getElementById('status').innerText = "NAVIGATED";
+                
+                // --- 這裡就是你要的指令：清空文字並取消焦點 ---
+                searchInput.value = ""; 
                 searchInput.blur();
+                
               } else {
                 document.getElementById('status').innerText = "NOT FOUND";
               }
@@ -217,7 +221,6 @@
           }
         });
 
-        // --- 底圖加載邏輯 (維持你原本的結構) ---
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
