@@ -18,67 +18,32 @@
       box-sizing: border-box; 
     }
 
-    /* Token Login Interface (All English) */
     #tokenOverlay { 
       position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
       display: flex; justify-content: center; align-items: center; 
       z-index: 9999; background: #000; 
     }
-    #loginBox { 
-      padding: 40px; border-radius: 12px; width: 380px; 
-      text-align: center; border: 1px solid #333;
-      display: flex; flex-direction: column; align-items: center;
-    }
-    .token-hint {
-      font-size: 11px; color: #888; margin: 18px 0; line-height: 1.6;
-    }
+    #loginBox { padding: 40px; border-radius: 12px; width: 380px; text-align: center; border: 1px solid #333; display: flex; flex-direction: column; align-items: center; }
+    .token-hint { font-size: 11px; color: #888; margin: 18px 0; line-height: 1.6; }
     .token-hint a { color: #5dade2; text-decoration: none; font-weight: bold; }
-    
-    #tokenInput { 
-      width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; 
-      border: 1px solid #444; background: #111; color: #fff; 
-      outline: none; text-align: center; box-sizing: border-box;
-      font-size: 13px; letter-spacing: 1px;
-    }
-    #startBtn { 
-      background: #5dade2; color: #fff; border: none; padding: 12px 24px; 
-      border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; 
-      transition: background 0.2s; letter-spacing: 1px;
-    }
-    #startBtn:hover { background: #3498db; }
+    #tokenInput { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #444; background: #111; color: #fff; outline: none; text-align: center; box-sizing: border-box; }
+    #startBtn { background: #5dade2; color: #fff; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
     
     :root { --sidebar-width: 220px; }
-
-    /* HUD Transitions */
-    .hud-hidden #menu { transform: translateX(-300px); opacity: 0; }
-    .hud-hidden #infoBar { transform: translateX(-300px); opacity: 0; }
+    .hud-hidden #menu, .hud-hidden #infoBar { transform: translateX(-300px); opacity: 0; }
     .hud-hidden #inspectorPanel { transform: translateX(-600px); opacity: 0; }
 
     #menu { position: absolute; top: 20px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; }
     #infoBar { position: absolute; bottom: 40px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); font-size: 11px; z-index: 1000; }
     
-    #inspectorPanel { 
-      position: absolute; bottom: 40px; left: 250px; 
-      padding: 15px; border-radius: 12px; width: 260px; 
-      opacity: 0; visibility: hidden; pointer-events: none;
-      transform: translateX(-20px); z-index: 999;
-    }
-    #inspectorPanel.active { opacity: 1; visibility: visible; pointer-events: auto; transform: translateX(0); }
-    #closeInspector { position: absolute; right: 10px; top: 10px; cursor: pointer; color: #5dade2; font-size: 18px; font-weight: bold; padding: 2px 6px; }
+    #inspectorPanel { position: absolute; bottom: 40px; left: 250px; padding: 15px; border-radius: 12px; width: 260px; opacity: 0; visibility: hidden; transform: translateX(-20px); z-index: 999; }
+    #inspectorPanel.active { opacity: 1; visibility: visible; transform: translateX(0); }
+    #closeInspector { position: absolute; right: 10px; top: 10px; cursor: pointer; color: #5dade2; font-size: 18px; font-weight: bold; }
 
-    #compassContainer { position: absolute; top: 70px; right: 12px; width: 45px; height: 45px; z-index: 1000; cursor: pointer; }
-
-    /* HUD Toggle Switch - Positioned to avoid Fullscreen button */
-    #hudToggle {
-      position: absolute; bottom: 80px; right: 20px; 
-      width: 48px; height: 48px; border-radius: 50%;
-      cursor: pointer; z-index: 1001;
-      display: flex; justify-content: center; align-items: center;
-      font-size: 20px; user-select: none;
-    }
+    #hudToggle { position: absolute; bottom: 80px; right: 20px; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; z-index: 1001; display: flex; justify-content: center; align-items: center; font-size: 20px; }
 
     .label { font-size: 10px; margin-top: 12px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid rgba(93, 173, 226, 0.3); }
-    select { background: #000; color: #fff; border: 1px solid #444; padding: 6px; width: 100%; border-radius: 4px; font-size: 12px; margin-bottom: 8px; }
+    select, input[type="range"] { background: #000; color: #fff; border: 1px solid #444; width: 100%; margin-bottom: 8px; }
     .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 5px 0; font-size: 11px; }
     .switch { position: relative; width: 34px; height: 18px; }
     .switch input { opacity: 0; width: 0; height: 0; }
@@ -86,13 +51,10 @@
     .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background: #fff; transition: .4s; border-radius: 50%; }
     input:checked + .slider { background: #5dade2; }
     input:checked + .slider:before { transform: translateX(16px); }
-    .info-item { display: flex; justify-content: space-between; color: #aaa; margin-bottom: 5px; }
-    .info-value { color: #fff; font-weight: 600; font-variant-numeric: tabular-nums; }
-    .highlight-label { color: #5dade2; font-weight: bold; font-size: 9px; }
-    #scaleBar { height: 2px; border: 1px solid #fff; border-top: none; width: 80px; margin-top: 4px; }
+    
     .detail-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .detail-key { color: #888; }
     .detail-val { color: #5dade2; font-weight: bold; }
+    #compassContainer { position: absolute; top: 70px; right: 12px; width: 45px; height: 45px; z-index: 1000; }
   </style>
 </head>
 <body>
@@ -100,65 +62,55 @@
   <div id="tokenOverlay">
     <div id="loginBox" class="glass-panel">
       <h3 style="color:#5dade2; margin-top:0; letter-spacing: 2px;">RAILWAY MONITOR</h3>
-      <div class="token-hint">
-        This system requires a <span style="color:#fff;">Cesium Ion Token</span> for authorization.<br>
-        You can obtain one from your <a href="https://cesium.com/ion/tokens" target="_blank">Cesium Ion Dashboard</a>.
-      </div>
-      <input type="password" id="tokenInput" placeholder="PASTE YOUR ACCESS TOKEN HERE">
-      <button id="startBtn">INITIALIZE SYSTEM</button>
+      <div class="token-hint">Authorization via <span style="color:#fff;">Cesium Ion Token</span> required.</div>
+      <input type="password" id="tokenInput" placeholder="PASTE ACCESS TOKEN">
+      <button id="startBtn">INITIALIZE</button>
     </div>
   </div>
 
   <div id="cesiumContainer"></div>
-
-  <div id="hudToggle" class="glass-panel" title="Toggle HUD Display">🛰️</div>
+  <div id="hudToggle" class="glass-panel">🛰️</div>
   
   <div id="menu" class="glass-panel">
-    <div class="label">Display Control</div>
+    <div class="label">Display</div>
     <div class="switch-container"><span>3D Buildings</span><label class="switch"><input type="checkbox" id="buildingToggle"><span class="slider"></span></label></div>
-    <div class="switch-container"><span>3D Terrain</span><label class="switch"><input type="checkbox" id="terrainToggle"><span class="slider"></span></label></div>
+    <div class="switch-container"><span>Terrain</span><label class="switch"><input type="checkbox" id="terrainToggle"><span class="slider"></span></label></div>
     <div class="switch-container"><span>Day/Night</span><label class="switch"><input type="checkbox" id="lightToggle"><span class="slider"></span></label></div>
-    <div class="switch-container"><span style="color:#5dade2">Inspector Mode</span><label class="switch"><input type="checkbox" id="inspectToggle"><span class="slider"></span></label></div>
-    <div class="switch-container"><span>Auto-Rotation</span><label class="switch"><input type="checkbox" id="rotateToggle"><span class="slider"></span></label></div>
+    
+    <div class="label">Color Saturation</div>
+    <input type="range" id="satSlider" min="0" max="3" step="0.1" value="1.0">
 
     <div class="label">Railway Layer</div>
     <select id="railwaySelect">
       <option value="standard">Infrastructure</option>
       <option value="maxspeed">Max speeds</option>
       <option value="signals">Signalling</option>
-      <option value="electrification">Electrification</option>
       <option value="gauge">Track Gauge</option>
     </select>
     
     <div class="label">Base Map</div>
     <select id="baseSelect">
       <option value="osm">OpenStreetMap</option>
-      <option value="dark">ArcGIS Midnight</option>
-      <option value="bing_aerial">Bing Satellite</option>
+      <option value="dark">ArcGIS Dark Gray</option>
+      <option value="arc_std">ArcGIS Street Map</option>
+      <option value="arc_sat">ArcGIS Satellite</option>
+      <option value="ion_sat">Cesium Ion Aerial</option>
     </select>
   </div>
 
   <div id="infoBar" class="glass-panel">
-    <div class="info-item"><span class="highlight-label">SOLAR TIME</span><span id="timeVal" class="info-value">--:--:--</span></div>
-    <div class="info-item">LAT: <span id="latVal" class="info-value">0.00°</span></div>
-    <div class="info-item">LON: <span id="lonVal" class="info-value">0.00°</span></div>
-    <div class="info-item">ALT: <span id="altVal" class="info-value">--</span></div>
-    <div style="margin-top:10px;">
-      <div id="scaleLabel" style="font-size: 8px; color: #5dade2; font-weight: bold;">-- KM</div>
-      <div id="scaleBar"></div>
-      <div id="status" style="font-size:9px; color:#555; margin-top:5px; text-align:right;">STANDBY</div>
-    </div>
+    <div id="timeVal" style="color:#5dade2; font-weight:bold; margin-bottom:5px;">00:00:00</div>
+    <div id="latVal">LAT: 0.00°</div>
+    <div id="lonVal">LON: 0.00°</div>
+    <div id="altVal">ALT: --</div>
   </div>
 
   <div id="inspectorPanel" class="glass-panel">
-    <div id="closeInspector" title="Collapse & Clear Data">«</div>
-    <div class="highlight-label" style="margin-bottom:12px; border-bottom:1px solid #333; padding-bottom:5px;">Real-time Track Data</div>
+    <div id="closeInspector">×</div>
     <div id="railDetailContent"></div>
   </div>
 
-  <div id="compassContainer">
-    <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" stroke="#fff" stroke-width="1" fill="none" opacity="0.3"/><path d="M50,15 L60,50 L50,45 L40,50 Z" fill="#f1948a"/><path d="M50,85 L60,50 L50,55 L40,50 Z" fill="#5dade2"/></svg>
-  </div>
+  <div id="compassContainer"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" stroke="#fff" stroke-width="1" fill="none" opacity="0.3"/><path d="M50,15 L60,50 L50,45 L40,50 Z" fill="#f1948a"/><path d="M50,85 L60,50 L50,55 L40,50 Z" fill="#5dade2"/></svg></div>
 
   <script>
     const startBtn = document.getElementById('startBtn');
@@ -171,145 +123,80 @@
       Cesium.Ion.defaultAccessToken = token;
       try {
         const viewer = new Cesium.Viewer('cesiumContainer', {
-          homeButton: true,
-          fullscreenButton: true,
-          baseLayerPicker: false,
-          geocoder: false,
-          sceneModePicker: false,
-          navigationHelpButton: false,
-          infoBox: false,
-          selectionIndicator: false,
-          timeline: false,
-          animation: false,
-          requestRenderMode: true,
-          baseLayer: false
+          baseLayerPicker: false, geocoder: false, homeButton: true, infoBox: false,
+          timeline: false, animation: false, baseLayer: false
         });
 
-        const hudToggle = document.getElementById('hudToggle');
-        hudToggle.addEventListener('click', () => {
+        // HUD Toggle logic
+        document.getElementById('hudToggle').onclick = () => {
           document.body.classList.toggle('hud-hidden');
-          hudToggle.innerText = document.body.classList.contains('hud-hidden') ? "🌍" : "🛰️";
-        });
+          document.getElementById('hudToggle').innerText = document.body.classList.contains('hud-hidden') ? "🌍" : "🛰️";
+        };
 
-        viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
-          e.cancel = true; 
-          const currentPos = viewer.camera.positionCartographic;
-          viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(
-              Cesium.Math.toDegrees(currentPos.longitude), Cesium.Math.toDegrees(currentPos.latitude), 15000000.0
-            ),
-            orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
-          });
-        });
+        let baseLayer = null, railLayer = null;
 
-        let baseLayer = null, railwayLayer = null;
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
-          if (type === 'osm') provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
-          else if (type === 'dark') provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer');
-          else provider = await Cesium.createWorldImageryAsync({ style: Cesium.IonWorldImageryStyle.AERIAL });
+          switch(type) {
+            case 'osm': provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' }); break;
+            case 'dark': provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer'); break;
+            case 'arc_std': provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer'); break;
+            case 'arc_sat': provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer'); break;
+            case 'ion_sat': provider = await Cesium.createWorldImageryAsync(); break;
+          }
           baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
-          viewer.scene.requestRender();
+          applySaturation(); // 套用當前飽和度
+        }
+
+        // 飽和度延遲處理 (Debounce)
+        let satTimeout;
+        const satSlider = document.getElementById('satSlider');
+        satSlider.oninput = () => {
+          clearTimeout(satTimeout);
+          satTimeout = setTimeout(() => applySaturation(), 200);
+        };
+
+        function applySaturation() {
+          const val = parseFloat(satSlider.value);
+          if (baseLayer) baseLayer.saturation = val;
+          if (railLayer) railLayer.saturation = val;
         }
 
         function loadRailway(style) {
-          if (railwayLayer) viewer.imageryLayers.remove(railwayLayer);
-          railwayLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+          if (railLayer) viewer.imageryLayers.remove(railLayer);
+          railLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
             url: `https://{s}.tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png`,
-            subdomains: ['a', 'b', 'c'], minimumLevel: 1, maximumLevel: 19
+            subdomains: ['a', 'b', 'c']
           }));
-          viewer.scene.requestRender();
+          applySaturation();
         }
 
-        const inspectToggle = document.getElementById('inspectToggle');
-        const inspectorPanel = document.getElementById('inspectorPanel');
-        const detailContent = document.getElementById('railDetailContent');
-        const closeBtn = document.getElementById('closeInspector');
-        let isQuerying = false;
-
-        closeBtn.addEventListener('click', () => {
-          inspectorPanel.classList.remove('active');
-          setTimeout(() => { detailContent.innerHTML = ""; }, 300);
-        });
-
-        const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-        handler.setInputAction(async (click) => {
-          if (!inspectToggle.checked || isQuerying) return;
-          const ray = viewer.camera.getPickRay(click.position);
-          const cartesian = viewer.scene.globe.pick(ray, viewer.scene);
-          if (cartesian) {
-            const carto = Cesium.Cartographic.fromCartesian(cartesian);
-            const lat = Cesium.Math.toDegrees(carto.latitude);
-            const lon = Cesium.Math.toDegrees(carto.longitude);
-            const height = viewer.camera.positionCartographic.height;
-            const radius = Math.max(25, Math.min(800, height * 0.05));
-            isQuerying = true;
-            inspectorPanel.classList.add('active');
-            detailContent.innerHTML = '<div style="color:#5dade2; font-size:10px; padding:10px;">📡 LINKING...</div>';
-            const query = `[out:json][timeout:10];way["railway"](around:${radius.toFixed(0)},${lat},${lon});out tags;`;
-            try {
-              const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
-              const data = await res.json();
-              if (data.elements && data.elements.length > 0) {
-                const t = data.elements[0].tags;
-                detailContent.innerHTML = `
-                  <div class="detail-row"><span class="detail-key">Name</span><span class="detail-val">${t.name || 'Unnamed'}</span></div>
-                  <div class="detail-row"><span class="detail-key">Max Speed</span><span class="detail-val">${t.maxspeed || '--'} km/h</span></div>
-                  <div class="detail-row"><span class="detail-key">Gauge</span><span class="detail-val">${t.gauge || '--'} mm</span></div>
-                  <div class="detail-row"><span class="detail-key">Voltage</span><span class="detail-val">${t.voltage || '--'}</span></div>
-                  <div class="detail-row"><span class="detail-key">Usage</span><span class="detail-val">${t.usage || '--'}</span></div>
-                `;
-              } else { detailContent.innerHTML = `<div style="color:#888; font-size:10px; padding:10px;">Target not found.</div>`; }
-            } catch (e) { detailContent.innerHTML = '<div style="color:#f1948a; font-size:10px; padding:10px;">Timeout.</div>'; }
-            finally { isQuerying = false; }
-          }
-        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-        let isRotating = false;
-        let lastTime = Date.now();
-        viewer.scene.postUpdate.addEventListener(() => {
-          if (isRotating) {
-            const now = Date.now();
-            viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, 0.05 * (now - lastTime) / 1000.0);
-            lastTime = now;
-          } else { lastTime = Date.now(); }
-        });
-
-        function updateUI() {
-          const c = viewer.camera.positionCartographic;
-          if (!c) return;
-          const lon = Cesium.Math.toDegrees(c.longitude);
-          const lat = Cesium.Math.toDegrees(c.latitude);
-          document.getElementById('latVal').innerText = lat.toFixed(2) + "°";
-          document.getElementById('lonVal').innerText = lon.toFixed(2) + "°";
-          document.getElementById('altVal').innerText = (c.height/1000).toFixed(0) + "km";
-          const now = new Date();
-          const solarMin = (now.getUTCHours()*60 + now.getUTCMinutes() + (lon/15)*60 + 1440) % 1440;
-          document.getElementById('timeVal').innerText = `${Math.floor(solarMin/60).toString().padStart(2,'0')}:${Math.floor(solarMin%60).toString().padStart(2,'0')}:${now.getUTCSeconds().toString().padStart(2,'0')}`;
-          const skm = (2 * Math.tan(Cesium.Math.toRadians(30)) * c.height / viewer.canvas.clientWidth) * 80 / 1000;
-          document.getElementById('scaleLabel').innerText = skm > 1 ? skm.toFixed(1) + " KM" : (skm*1000).toFixed(0) + " M";
-          document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
-        }
-
-        document.getElementById('baseSelect').addEventListener('change', (e) => updateBaseMap(e.target.value));
-        document.getElementById('railwaySelect').addEventListener('change', (e) => loadRailway(e.target.value));
-        document.getElementById('rotateToggle').addEventListener('change', (e) => isRotating = e.target.checked);
-        document.getElementById('lightToggle').addEventListener('change', (e) => { viewer.scene.globe.enableLighting = e.target.checked; viewer.scene.requestRender(); });
+        // UI Events
+        document.getElementById('baseSelect').onchange = (e) => updateBaseMap(e.target.value);
+        document.getElementById('railwaySelect').onchange = (e) => loadRailway(e.target.value);
+        document.getElementById('lightToggle').onchange = (e) => { viewer.scene.globe.enableLighting = e.target.checked; };
+        
         let bld = null;
-        document.getElementById('buildingToggle').addEventListener('change', async (e) => {
-          if (e.target.checked) { if(!bld) bld = await Cesium.createOsmBuildingsAsync(); viewer.scene.primitives.add(bld); }
-          else if(bld) bld.show = false; viewer.scene.requestRender();
-        });
+        document.getElementById('buildingToggle').onchange = async (e) => {
+          if (e.target.checked) { if(!bld) bld = await Cesium.createOsmBuildingsAsync(); viewer.scene.primitives.add(bld); bld.show = true; }
+          else if(bld) bld.show = false;
+        };
 
+        // Initialization
         document.getElementById('tokenOverlay').style.display = 'none';
         await updateBaseMap('osm');
         loadRailway('standard');
-        viewer.camera.setView({
-          destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0),
-          orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
+
+        viewer.scene.preRender.addEventListener(() => {
+          const c = viewer.camera.positionCartographic;
+          if (!c) return;
+          document.getElementById('latVal').innerText = `LAT: ${Cesium.Math.toDegrees(c.latitude).toFixed(2)}°`;
+          document.getElementById('lonVal').innerText = `LON: ${Cesium.Math.toDegrees(c.longitude).toFixed(2)}°`;
+          document.getElementById('altVal').innerText = `ALT: ${(c.height/1000).toFixed(0)}km`;
+          document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
         });
-        viewer.scene.preRender.addEventListener(updateUI);
+
       } catch (e) { console.error(e); }
     }
   </script>
