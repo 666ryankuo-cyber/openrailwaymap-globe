@@ -88,8 +88,9 @@
     
     <div class="label">Base Map</div>
     <select id="baseSelect">
-      <option value="arcgis_gray">ArcGIS Gray (Light)</option>
+      <option value="arcgis_gray">ArcGIS Gray (Neutral)</option>
       <option value="dark">ArcGIS Midnight (Dark)</option>
+      <option value="osm">OpenStreetMap (Detail)</option>
       <option value="bing_aerial">Satellite (Bing)</option>
       <option value="sentinel">Satellite (Sentinel-2)</option>
     </select>
@@ -143,6 +144,16 @@
           baseLayer: false
         });
 
+        // --- 中立化 Home 鍵設定 ---
+        const neutralView = {
+            destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0),
+            orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
+        };
+        viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
+            e.cancel = true; // 取消原本回美國的動作
+            viewer.camera.flyTo(neutralView); // 改飛往 (0,0)
+        });
+
         document.getElementById('tokenOverlay').style.display = 'none';
         uiToggle.style.display = 'flex'; 
         const scene = viewer.scene;
@@ -152,7 +163,7 @@
         let loadTimeout = null;
         let osmBuildings = null;
 
-        // --- 搜尋邏輯 ---
+        // 搜尋邏輯
         const searchInput = document.getElementById('searchInput');
         searchInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
@@ -176,7 +187,7 @@
           }
         });
 
-        // --- 3D 建築邏輯 ---
+        // 3D 建築開關
         document.getElementById('buildingToggle').addEventListener('change', async (e) => {
           if (e.target.checked) {
             if (!osmBuildings) {
@@ -188,7 +199,7 @@
           } else { if(osmBuildings) osmBuildings.show = false; document.getElementById('status').innerText = "3D HIDDEN"; }
         });
 
-        // --- 圖層切換邏輯 ---
+        // 圖層切換
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
@@ -201,11 +212,13 @@
           } else if (type === 'dark') {
             provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer');
             viewer.scene.globe.enableLighting = true; 
+          } else if (type === 'osm') {
+            provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
           } else {
             provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
           }
           baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
-          document.getElementById('status').innerText = "BASEMAP UPDATED";
+          document.getElementById('status').innerText = "BASEMAP: " + type.toUpperCase();
         }
 
         function executeRailwayLoading(style) {
@@ -224,12 +237,11 @@
           executeRailwayLoading(currentRailwayStyle);
         });
 
-        // 初始化
+        // --- 啟動初始化為 (0,0) ---
         await updateBaseMap('arcgis_gray');
         executeRailwayLoading('standard');
-        viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(121.5, 25.0, 15000.0) });
+        viewer.camera.setView(neutralView);
 
-        // HUD 資訊更新
         scene.preRender.addEventListener(() => {
           document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
           const carto = viewer.camera.positionCartographic;
