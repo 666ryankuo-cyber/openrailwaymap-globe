@@ -75,6 +75,16 @@
 
     .label { font-size: 10px; margin-top: 8px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; }
     select { background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid #555; padding: 6px; width: 100%; border-radius: 6px; font-size: 12px; cursor: pointer; margin-bottom: 8px; }
+    
+    /* 3D Switch Style */
+    .switch-container { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; margin-bottom: 10px; }
+    .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 20px; }
+    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: #5dade2; }
+    input:checked + .slider:before { transform: translateX(20px); }
+
     .info-item { display: flex; justify-content: space-between; color: #aaa; margin-bottom: 4px; align-items: center; }
     .info-value { color: #fff; font-weight: 600; font-variant-numeric: tabular-nums; }
     .highlight-label { color: #5dade2; font-weight: bold; font-size: 9px; }
@@ -108,6 +118,16 @@
     <div id="searchBox">
       <input type="text" id="searchInput" placeholder="Enter Location or Station...">
     </div>
+
+    <div class="label">Display Options</div>
+    <div class="switch-container">
+      <span style="font-size: 11px; color: #ccc;">OSM 3D Buildings</span>
+      <label class="switch">
+        <input type="checkbox" id="buildingToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+
     <div class="label">Railway Layer</div>
     <select id="railwaySelect">
       <option value="standard">Infrastructure</option>
@@ -116,6 +136,7 @@
       <option value="electrification">Electrification</option>
       <option value="gauge">Track Gauge</option>
     </select>
+
     <div class="label">Base Map</div>
     <select id="baseSelect">
       <option value="arcgis_gray">ArcGIS Gray</option>
@@ -186,8 +207,11 @@
         let railwayLayer = null;
         let currentRailwayStyle = 'standard';
         let loadTimeout = null;
+        
+        // 3D 建築變數
+        let osmBuildings = null;
 
-        // --- 搜尋邏輯 (已加入清空指令) ---
+        // --- 搜尋邏輯 ---
         const searchInput = document.getElementById('searchInput');
         searchInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
@@ -206,18 +230,41 @@
                   duration: 2.0
                 });
                 document.getElementById('status').innerText = "NAVIGATED";
-                
-                // --- 這裡就是你要的功能 ---
-                searchInput.value = ""; // 清空輸入框
-                searchInput.blur();    // 讓輸入框失去焦點（收起手機鍵盤）
-                
-              } else { 
-                document.getElementById('status').innerText = "NOT FOUND"; 
-              }
+                searchInput.value = ""; 
+                searchInput.blur();
+              } else { document.getElementById('status').innerText = "NOT FOUND"; }
             })
-            .catch(() => { 
-              document.getElementById('status').innerText = "CORS BLOCKED"; 
-            });
+            .catch(() => { document.getElementById('status').innerText = "CORS BLOCKED"; });
+          }
+        });
+
+        // --- 3D 建築開關邏輯 ---
+        const buildingToggle = document.getElementById('buildingToggle');
+        buildingToggle.addEventListener('change', async () => {
+          if (buildingToggle.checked) {
+            if (!osmBuildings) {
+              // 第一次開啟，下載數據
+              document.getElementById('status').innerText = "LOADING 3D...";
+              try {
+                osmBuildings = await Cesium.createOsmBuildingsAsync();
+                viewer.scene.primitives.add(osmBuildings);
+                document.getElementById('status').innerText = "3D ACTIVE";
+              } catch (e) {
+                console.error(e);
+                document.getElementById('status').innerText = "3D ERROR";
+                buildingToggle.checked = false;
+              }
+            } else {
+              // 已下載過，直接顯示
+              osmBuildings.show = true;
+              document.getElementById('status').innerText = "3D ON";
+            }
+          } else {
+            // 隱藏建築，不刪除數據
+            if (osmBuildings) {
+              osmBuildings.show = false;
+              document.getElementById('status').innerText = "3D HIDDEN";
+            }
           }
         });
 
