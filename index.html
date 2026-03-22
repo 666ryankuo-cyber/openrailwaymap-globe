@@ -7,72 +7,26 @@
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.105/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <style>
     html, body, #cesiumContainer { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #000; }
-    
     .glass-panel {
-      background: rgba(30, 30, 30, 0.7); 
-      color: #fff; border: 1px solid rgba(255,255,255,0.15); 
+      background: rgba(30, 30, 30, 0.7); color: #fff; border: 1px solid rgba(255,255,255,0.15); 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Mono", monospace;
       -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6); 
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      box-sizing: border-box; 
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-sizing: border-box; 
     }
-
-    #tokenOverlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      display: flex; justify-content: center; align-items: center;
-      z-index: 9999; background: #000000; 
-    }
+    #tokenOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 9999; background: #000000; }
     #loginBox { padding: 40px; border-radius: 15px; width: 85%; max-width: 400px; text-align: center; border: 1px solid #333; }
-    #tokenInput { 
-      width: 100%; padding: 12px; margin-bottom: 25px; border-radius: 8px; 
-      border: 1px solid #444; background: rgba(255,255,255,0.05); 
-      color: #fff; box-sizing: border-box; outline: none; font-size: 14px;
-    }
+    #tokenInput { width: 100%; padding: 12px; margin-bottom: 25px; border-radius: 8px; border: 1px solid #444; background: rgba(255,255,255,0.05); color: #fff; box-sizing: border-box; outline: none; font-size: 14px; }
     #startBtn { background: #5dade2; color: #fff; border: none; padding: 12px 30px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-
-    #uiToggle {
-      position: absolute; bottom: 80px; right: 20px; 
-      width: 45px; height: 45px; z-index: 1001;
-      border-radius: 50%; cursor: pointer;
-      display: none; justify-content: center; align-items: center;
-      font-size: 20px; transition: 0.3s;
-    }
-
-    :root {
-      --sidebar-width: 220px;
-      --sidebar-hide-offset: -280px;
-    }
-
-    #menu { 
-      position: absolute; top: 20px; left: 20px; 
-      padding: 15px; border-radius: 12px; 
-      width: var(--sidebar-width); z-index: 1000; 
-    }
-    #infoBar { 
-      position: absolute; bottom: 60px; left: 20px; 
-      padding: 15px; border-radius: 12px; z-index: 1000; 
-      font-size: 11px; 
-      width: var(--sidebar-width); 
-    }
-
+    #uiToggle { position: absolute; bottom: 80px; right: 20px; width: 45px; height: 45px; z-index: 1001; border-radius: 50%; cursor: pointer; display: none; justify-content: center; align-items: center; font-size: 20px; transition: 0.3s; }
+    :root { --sidebar-width: 220px; --sidebar-hide-offset: -280px; }
+    #menu { position: absolute; top: 20px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; }
+    #infoBar { position: absolute; bottom: 60px; left: 20px; padding: 15px; border-radius: 12px; z-index: 1000; font-size: 11px; width: var(--sidebar-width); }
     .hud-hidden #menu, .hud-hidden #infoBar { transform: translateX(var(--sidebar-hide-offset)); opacity: 0; }
-
     #searchBox { margin-bottom: 15px; position: relative; }
-    #searchInput {
-      width: 100%; background: rgba(0,0,0,0.4); border: 1px solid #555;
-      padding: 8px 12px; border-radius: 6px; color: #fff; font-size: 12px;
-      box-sizing: border-box; outline: none; transition: 0.3s;
-    }
+    #searchInput { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid #555; padding: 8px 12px; border-radius: 6px; color: #fff; font-size: 12px; box-sizing: border-box; outline: none; transition: 0.3s; }
     #searchInput:focus { border-color: #5dade2; background: rgba(0,0,0,0.6); }
-
-    #compassContainer { 
-      position: absolute; top: 80px; right: 20px; 
-      width: 50px; height: 50px; z-index: 1000; 
-      cursor: pointer; border-radius: 50%; padding: 5px; 
-    }
+    #compassContainer { position: absolute; top: 80px; right: 20px; width: 50px; height: 50px; z-index: 1000; cursor: pointer; border-radius: 50%; padding: 5px; }
     .hud-hidden #compassContainer { transform: scale(0.8); opacity: 0.5; }
-
     .label { font-size: 10px; margin-top: 8px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; }
     select { background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid #555; padding: 6px; width: 100%; border-radius: 6px; font-size: 12px; cursor: pointer; margin-bottom: 8px; }
     .info-item { display: flex; justify-content: space-between; color: #aaa; margin-bottom: 4px; align-items: center; }
@@ -81,33 +35,15 @@
     #scaleBarWrapper { margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
     #scaleBar { height: 3px; border: 1px solid #fff; border-top: none; width: 80px; position: relative; }
     #status { font-size: 9px; color: #777; margin-top: 8px; text-align: right; }
-
-    @media (max-width: 600px) {
-      :root { --sidebar-width: 180px; --sidebar-hide-offset: -220px; }
-      #infoBar { bottom: 80px; }
-      #uiToggle { bottom: 120px; }
-    }
   </style>
 </head>
 <body class="ui-active">
-
-  <div id="tokenOverlay">
-    <div id="loginBox" class="glass-panel">
-      <h2 style="margin:0; color:#5dade2; font-size:18px; letter-spacing:2px;">SYSTEM ACCESS</h2>
-      <p style="font-size: 11px; color: #888; margin-bottom: 20px;">NEUTRAL RAILWAY MONITORING INTERFACE</p>
-      <input type="password" id="tokenInput" placeholder="Enter Cesium Token...">
-      <button id="startBtn">INITIALIZE ENGINE</button>
-    </div>
-  </div>
-
+  <div id="tokenOverlay"><div id="loginBox" class="glass-panel"><h2 style="margin:0; color:#5dade2; font-size:18px; letter-spacing:2px;">SYSTEM ACCESS</h2><p style="font-size: 11px; color: #888; margin-bottom: 20px;">NEUTRAL RAILWAY MONITORING INTERFACE</p><input type="password" id="tokenInput" placeholder="Enter Cesium Token..."><button id="startBtn">INITIALIZE ENGINE</button></div></div>
   <div id="cesiumContainer"></div>
   <div id="uiToggle" class="glass-panel" title="Toggle HUD">🛰️</div>
-  
   <div id="menu" class="glass-panel">
     <div class="label">Search Location</div>
-    <div id="searchBox">
-      <input type="text" id="searchInput" placeholder="Enter Location or Station...">
-    </div>
+    <div id="searchBox"><input type="text" id="searchInput" placeholder="Enter Location..."></div>
     <div class="label">Railway Layer</div>
     <select id="railwaySelect">
       <option value="standard">Infrastructure</option>
@@ -121,19 +57,9 @@
       <option value="arcgis_gray">ArcGIS Gray</option>
       <option value="bing_aerial">Satellite</option>
       <option value="osm">OpenStreetMap</option>
-      <option value="blue_marble">NASA Blue</option>
-      <option value="black_marble">NASA Black</option>
     </select>
   </div>
-
-  <div id="compassContainer" class="glass-panel">
-    <svg id="compassSvg" viewBox="0 0 100 100">
-      <circle cx="50" cy="50" r="45" stroke="#fff" stroke-width="1.5" fill="none" opacity="0.2"/>
-      <path d="M50,15 L62,50 L50,45 L38,50 Z" fill="#f1948a"/>
-      <path d="M50,85 L62,50 L50,55 L38,50 Z" fill="#5dade2"/>
-    </svg>
-  </div>
-
+  <div id="compassContainer" class="glass-panel"><svg id="compassSvg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" stroke="#fff" stroke-width="1.5" fill="none" opacity="0.2"/><path d="M50,15 L62,50 L50,45 L38,50 Z" fill="#f1948a"/><path d="M50,85 L62,50 L50,55 L38,50 Z" fill="#5dade2"/></svg></div>
   <div id="infoBar" class="glass-panel">
     <div class="info-item"><span class="highlight-label">SOLAR TIME</span><span id="timeVal" class="info-value">--:--:--</span></div>
     <div class="info-item">ZONE: <span id="zoneVal" class="info-value">UTC+0</span></div>
@@ -141,22 +67,13 @@
     <div class="info-item">LAT: <span id="latVal" class="info-value">--</span></div>
     <div class="info-item">LON: <span id="lonVal" class="info-value">--</span></div>
     <div class="info-item">ALT: <span id="altVal" class="info-value">--</span></div>
-    <div id="scaleBarWrapper">
-      <div id="scaleLabel" style="font-size: 8px; color: #5dade2; font-weight: bold;">WAITING...</div>
-      <div id="scaleBar"></div>
-      <div id="status">STATUS: STANDBY</div>
-    </div>
+    <div id="scaleBarWrapper"><div id="scaleLabel" style="font-size: 8px; color: #5dade2; font-weight: bold;">WAITING...</div><div id="scaleBar"></div><div id="status">STATUS: STANDBY</div></div>
   </div>
 
   <script>
     const startBtn = document.getElementById('startBtn');
     const tokenInput = document.getElementById('tokenInput');
     const uiToggle = document.getElementById('uiToggle');
-
-    uiToggle.addEventListener('click', () => {
-      document.body.classList.toggle('hud-hidden');
-      uiToggle.innerText = document.body.classList.contains('hud-hidden') ? '🌍' : '🛰️';
-    });
 
     startBtn.addEventListener('click', () => {
       const userToken = tokenInput.value.trim();
@@ -166,134 +83,81 @@
 
     async function initSystem(token) {
       Cesium.Ion.defaultAccessToken = token;
-
       try {
-        // 先建立 Viewer
         const viewer = new Cesium.Viewer('cesiumContainer', {
           baseLayerPicker: false, geocoder: false, timeline: false, animation: false,
           sceneModePicker: true, navigationHelpButton: false, infoBox: false,
           selectionIndicator: false, requestRenderMode: true, maximumRenderTimeChange: 0.0,
-          baseLayer: false // 手動管理底圖
+          baseLayer: false
         });
 
         const scene = viewer.scene;
-        const ssc = scene.screenSpaceCameraController;
-        ssc.inertiaSpin = 0.88;
-
         let baseLayer = null;
         let railwayLayer = null;
         let currentRailwayStyle = 'standard';
-        let loadTimeout = null;
 
-        // 底圖加載函數
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
-          try {
-            if (type === 'bing_aerial') provider = await Cesium.createWorldImageryAsync({ style: Cesium.IonWorldImageryStyle.AERIAL });
-            else if (type === 'osm') provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
-            else if (type === 'blue_marble') provider = await Cesium.IonImageryProvider.fromAssetId(3845);
-            else if (type === 'black_marble') provider = await Cesium.IonImageryProvider.fromAssetId(3812);
-            else provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
-            
-            baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
-            return true;
-          } catch(e) { 
-            console.error("BaseMap Error:", e); 
-            return false;
-          }
+          if (type === 'bing_aerial') provider = await Cesium.createWorldImageryAsync({ style: Cesium.IonWorldImageryStyle.AERIAL });
+          else if (type === 'osm') provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
+          else provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
+          baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
+          return true;
         }
 
-        // 初始化底圖，成功後再關閉遮罩 (避免全藍)
+        // --- 優化鐵路加載函數 ---
+        function executeRailwayLoading(style) {
+          if (railwayLayer) viewer.imageryLayers.remove(railwayLayer);
+          document.getElementById('status').innerText = "SYNCING RAIL...";
+          
+          railwayLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+            url: `https://{s}.tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png`,
+            subdomains: ['a', 'b', 'c'],
+            minimumLevel: 0,
+            maximumLevel: 19,
+            credit: '© OpenRailwayMap contributors'
+          }));
+          
+          document.getElementById('status').innerText = "ACTIVE: " + style.toUpperCase();
+        }
+
         const baseReady = await updateBaseMap('arcgis_gray');
         if (baseReady) {
           document.getElementById('tokenOverlay').style.display = 'none';
-          uiToggle.style.display = 'flex'; 
-        } else {
-          alert("Base map failed to load. Check Token or Network.");
+          uiToggle.style.display = 'flex';
+          executeRailwayLoading('standard'); // 初始加載
         }
 
-        // --- 搜尋邏輯：Enter 後搜尋並清空 ---
+        // 搜尋邏輯
         const ionGeocoder = new Cesium.IonGeocodeProvider();
         const searchInput = document.getElementById('searchInput');
-
         searchInput.addEventListener('keypress', async (e) => {
           if (e.key === 'Enter') {
             const query = searchInput.value.trim();
             if (!query) return;
-            document.getElementById('status').innerText = "SEARCHING...";
-
             try {
               const results = await ionGeocoder.geocode(query);
-              if (results && results.length > 0) {
-                viewer.camera.flyTo({
-                  destination: results[0].destination,
-                  duration: 2.5
-                });
-                document.getElementById('status').innerText = "NAVIGATED";
-                
-                // 關鍵指令：清空文字並移除焦點
-                searchInput.value = "";
-                searchInput.blur(); 
-              } else {
-                document.getElementById('status').innerText = "NOT FOUND";
+              if (results.length > 0) {
+                viewer.camera.flyTo({ destination: results[0].destination, duration: 2.0 });
+                searchInput.value = ""; searchInput.blur();
               }
-            } catch (err) {
-              document.getElementById('status').innerText = "SEARCH ERROR";
-            }
+            } catch (err) { console.error(err); }
           }
         });
 
-        function executeRailwayLoading(style) {
-          const oldLayer = railwayLayer;
-          document.getElementById('status').innerText = "SYNCING...";
-          railwayLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
-            url: `https://{s}.tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png`,
-            subdomains: ['a', 'b', 'c'], minimumLevel: 1, maximumLevel: 19
-          }));
-          setTimeout(() => {
-            if (oldLayer) viewer.imageryLayers.remove(oldLayer);
-            document.getElementById('status').innerText = "ACTIVE: " + style.toUpperCase();
-          }, 600); 
-        }
-
-        function updateGISInfo() {
+        // 定位與羅盤
+        scene.preRender.addEventListener(() => {
           const camera = viewer.camera;
           const cartographic = camera.positionCartographic;
-          const lonDeg = Cesium.Math.toDegrees(cartographic.longitude);
-          const latDeg = Cesium.Math.toDegrees(cartographic.latitude);
-          document.getElementById('latVal').innerText = latDeg.toFixed(2) + "°";
-          document.getElementById('lonVal').innerText = lonDeg.toFixed(2) + "°";
-          const alt = cartographic.height;
-          document.getElementById('altVal').innerText = alt > 10000 ? (alt/1000).toFixed(0) + " km" : alt.toFixed(0) + " m";
-          
-          const offsetHours = Math.round(lonDeg / 15);
-          const now = new Date();
-          const localTime = new Date(now.getTime() + (offsetHours * 3600000));
-          document.getElementById('timeVal').innerText = localTime.getUTCHours().toString().padStart(2, '0') + ":" + localTime.getUTCMinutes().toString().padStart(2, '0') + ":" + localTime.getUTCSeconds().toString().padStart(2, '0');
-          document.getElementById('zoneVal').innerText = `UTC${offsetHours >= 0 ? '+' : ''}${offsetHours}`;
-          
-          const width = scene.canvas.clientWidth;
-          const height = scene.canvas.clientHeight;
-          const leftRay = camera.getPickRay(new Cesium.Cartesian2(width/2-50, height/2));
-          const rightRay = camera.getPickRay(new Cesium.Cartesian2(width/2+50, height/2));
-          const leftPos = scene.globe.pick(leftRay, scene);
-          const rightPos = scene.globe.pick(rightRay, scene);
-          if (leftPos && rightPos) {
-            const dist = Cesium.Cartesian3.distance(leftPos, rightPos);
-            document.getElementById('scaleLabel').innerText = dist > 1000 ? (dist/1000).toFixed(0) + " km" : dist.toFixed(0) + " m";
-          }
-        }
-
-        viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0) });
-
-        scene.preRender.addEventListener(() => {
-          document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
-          updateGISInfo();
+          document.getElementById('latVal').innerText = Cesium.Math.toDegrees(cartographic.latitude).toFixed(2) + "°";
+          document.getElementById('lonVal').innerText = Cesium.Math.toDegrees(cartographic.longitude).toFixed(2) + "°";
+          document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(camera.heading)}deg)`;
         });
 
-        document.getElementById('compassContainer').addEventListener('click', () => {
-          viewer.camera.flyTo({ destination: viewer.camera.position, orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }, duration: 1.2 });
+        uiToggle.addEventListener('click', () => {
+          document.body.classList.toggle('hud-hidden');
+          uiToggle.innerText = document.body.classList.contains('hud-hidden') ? '🌍' : '🛰️';
         });
 
         document.getElementById('baseSelect').addEventListener('change', (e) => updateBaseMap(e.target.value));
@@ -301,13 +165,6 @@
           currentRailwayStyle = e.target.value;
           executeRailwayLoading(currentRailwayStyle);
         });
-
-        viewer.camera.moveEnd.addEventListener(() => {
-          if (loadTimeout) clearTimeout(loadTimeout);
-          loadTimeout = setTimeout(() => executeRailwayLoading(currentRailwayStyle), 300);
-        });
-
-        executeRailwayLoading('standard');
 
       } catch (e) { console.error(e); }
     }
