@@ -8,6 +8,7 @@
   <style>
     html, body, #cesiumContainer { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #000; }
     
+    /* 玻璃擬態基礎樣式 */
     .glass-panel {
       background: rgba(20, 20, 20, 0.85); 
       color: #fff; border: 1px solid rgba(255,255,255,0.1); 
@@ -17,27 +18,36 @@
       box-sizing: border-box; 
     }
 
-    #tokenOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 9999; background: #000; }
-    #loginBox { padding: 40px; border-radius: 12px; width: 380px; text-align: center; border: 1px solid #333; }
-    #tokenInput { width: 100%; padding: 12px; margin: 20px 0; border-radius: 6px; border: 1px solid #444; background: #111; color: #fff; text-align: center; }
+    /* 1. Token 框置中優化 */
+    #tokenOverlay { 
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+      display: flex; justify-content: center; align-items: center; 
+      z-index: 9999; background: #000; 
+    }
+    #loginBox { padding: 40px; border-radius: 12px; width: 400px; text-align: center; border: 1px solid #333; }
+    #tokenInput { 
+      width: 100%; padding: 12px; margin: 20px 0; border-radius: 6px; 
+      border: 1px solid #444; background: #111; color: #fff; text-align: center;
+      box-sizing: border-box;
+    }
     #startBtn { background: #5dade2; color: #fff; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
 
-    :root { --sidebar-width: 240px; }
+    /* 版面配置 */
+    :root { --sidebar-width: 260px; }
     .hud-hidden #menu, .hud-hidden #infoBar { transform: translateX(-350px); opacity: 0; }
     
-    /* 整合式左上控制面板 */
-    #menu { position: absolute; top: 20px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; transition: 0.5s; }
-    #infoBar { position: absolute; bottom: 40px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); font-size: 11px; z-index: 1000; transition: 0.5s; }
+    /* 2. 左上控制面板 - 搜尋欄整合於此 */
+    #menu { position: absolute; top: 20px; left: 20px; padding: 20px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; transition: 0.5s; }
     
     #searchInput { 
-      width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #444; 
-      background: rgba(0,0,0,0.4); color: #fff; outline: none; margin-bottom: 15px;
-      font-size: 12px;
+      width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); 
+      background: rgba(0,0,0,0.4); color: #fff; outline: none; margin-bottom: 10px;
+      font-size: 12px; box-sizing: border-box; /* 確保不突出邊框 */
     }
 
-    #inspectorPanel { position: absolute; bottom: 40px; left: 280px; padding: 15px; border-radius: 12px; width: 260px; opacity: 0; visibility: hidden; transition: 0.4s; z-index: 999; }
-    #inspectorPanel.active { opacity: 1; visibility: visible; }
-
+    #infoBar { position: absolute; bottom: 40px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); font-size: 11px; z-index: 1000; transition: 0.5s; }
+    
+    /* 互動元件 */
     .label { font-size: 10px; margin-top: 12px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid rgba(93, 173, 226, 0.3); }
     .sat-header { display: flex; justify-content: space-between; align-items: center; }
     #satValDisplay { color: #5dade2; font-size: 10px; }
@@ -45,8 +55,9 @@
     input[type="range"] { -webkit-appearance: none; width: 100%; background: #333; height: 4px; border-radius: 2px; margin: 10px 0; outline: none; }
     input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: #5dade2; border-radius: 50%; cursor: pointer; }
 
-    select { background: #000; color: #fff; border: 1px solid #444; width: 100%; padding: 5px; border-radius: 4px; margin-bottom: 8px; font-size: 12px; }
-    .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 6px 0; font-size: 11px; }
+    select { background: #000; color: #fff; border: 1px solid #444; width: 100%; padding: 6px; border-radius: 4px; margin-bottom: 8px; font-size: 12px; }
+    .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; font-size: 11px; }
+    
     .switch { position: relative; width: 34px; height: 18px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #333; transition: .4s; border-radius: 20px; }
@@ -66,9 +77,10 @@
 
   <div id="tokenOverlay">
     <div id="loginBox" class="glass-panel">
-      <h3 style="color:#5dade2; letter-spacing: 2px;">RAILWAY MONITOR</h3>
-      <input type="password" id="tokenInput" placeholder="ENTER ACCESS TOKEN">
-      <button id="startBtn">ACCESS SYSTEM</button>
+      <h3 style="color:#5dade2; letter-spacing: 2px; margin-bottom: 5px;">RAILWAY MONITOR</h3>
+      <p style="font-size: 10px; color: #888; margin-bottom: 20px;">CESIUM ION ACCESS TOKEN REQUIRED</p>
+      <input type="password" id="tokenInput" placeholder="Paste your token here...">
+      <button id="startBtn">INITIALIZE SYSTEM</button>
     </div>
   </div>
 
@@ -125,11 +137,6 @@
     </div>
   </div>
 
-  <div id="inspectorPanel" class="glass-panel">
-    <div style="font-size:10px; color:#5dade2; border-bottom:1px solid #333; margin-bottom:10px;">OBJECT INSPECTOR</div>
-    <div id="railDetailContent"></div>
-  </div>
-
   <script>
     const startBtn = document.getElementById('startBtn');
     startBtn.onclick = () => {
@@ -155,7 +162,6 @@
           });
         };
 
-        // 飽和度處理
         const satSlider = document.getElementById('satSlider');
         const satValDisplay = document.getElementById('satValDisplay');
         let satTimeout;
@@ -183,7 +189,6 @@
           }
         };
 
-        // 底圖切換
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
@@ -198,7 +203,6 @@
           applySaturation();
         }
 
-        // 鐵路圖層切換 (補回功能)
         function loadRailway(style) {
           if (railLayer) viewer.imageryLayers.remove(railLayer);
           railLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
@@ -220,7 +224,6 @@
           else if(bld) bld.show = false;
         };
 
-        // 自轉與 UI 更新
         viewer.scene.postUpdate.addEventListener(() => { if (isRotating) viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, 0.001); });
 
         viewer.scene.preRender.addEventListener(() => {
@@ -240,10 +243,9 @@
           document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
         });
 
-        // 初始化
         document.getElementById('tokenOverlay').style.display = 'none';
         await updateBaseMap('osm');
-        loadRailway('standard'); // 初始載入鐵路圖層
+        loadRailway('standard');
 
       } catch (e) { console.error(e); }
     }
