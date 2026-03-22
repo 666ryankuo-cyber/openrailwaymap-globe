@@ -45,17 +45,18 @@
     input:checked + .slider { background: #5dade2; }
     input:checked + .slider:before { transform: translateX(16px); }
 
-    #compassContainer { position: absolute; top: 60px; right: 20px; width: 50px; height: 50px; z-index: 1000; cursor: pointer; transition: transform 0.2s; }
+    /* 調整指向針位置，避開預設 Home 鍵工具列 (top: 80px) */
+    #compassContainer { position: absolute; top: 80px; right: 20px; width: 50px; height: 50px; z-index: 1000; cursor: pointer; transition: transform 0.2s; }
     
-    /* HUD 按鈕位置上移至 100px */
+    /* HUD 切換按鈕位置保持在下方安全區域 */
     #hudToggle { position: absolute; bottom: 100px; right: 20px; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; z-index: 1001; display: flex; justify-content: center; align-items: center; font-size: 20px; }
 
     .info-item { display: flex; justify-content: space-between; margin-bottom: 4px; color: #888; }
     .info-val { color: #fff; font-weight: bold; }
     #scaleBar { height: 2px; border: 1px solid #fff; border-top: none; width: 80px; margin-top: 5px; }
 
-    /* 調整 Cesium 內建按鈕位置（避免遮擋） */
-    .cesium-viewer-toolbar { top: 60px !important; right: 80px !important; }
+    /* 確保 Cesium 內建工具列維持預設原位 (右上) */
+    .cesium-viewer-toolbar { top: 5px; right: 5px; }
   </style>
 </head>
 <body>
@@ -134,19 +135,19 @@
 
         let baseLayer = null, railLayer = null, isRotating = false;
 
-        // 自定義 Home 鍵行為：原地向上俯視地球
+        // 自定義 Home 鍵：原地向上俯視地球
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
-          e.cancel = true; // 攔截預設行為
+          e.cancel = true;
           const currentPos = viewer.camera.positionCartographic;
           viewer.camera.flyTo({
             destination: Cesium.Cartesian3.fromDegrees(
               Cesium.Math.toDegrees(currentPos.longitude),
               Cesium.Math.toDegrees(currentPos.latitude),
-              20000000.0 // 2萬公里高度
+              20000000.0
             ),
             orientation: {
               heading: viewer.camera.heading,
-              pitch: Cesium.Math.toRadians(-90), // 垂直向下
+              pitch: Cesium.Math.toRadians(-90),
               roll: 0.0
             }
           });
