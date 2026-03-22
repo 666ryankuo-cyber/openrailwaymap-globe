@@ -44,13 +44,20 @@
       --sidebar-hide-offset: -280px;
     }
 
-    /* 左側選單 */
     #menu { 
       position: absolute; top: 20px; left: 20px; 
       padding: 15px; border-radius: 12px; 
       width: var(--sidebar-width); z-index: 1000; 
     }
-    .hud-hidden #menu { transform: translateX(var(--sidebar-hide-offset)); opacity: 0; }
+    #infoBar { 
+      position: absolute; bottom: 60px; left: 20px; 
+      padding: 15px; border-radius: 12px; z-index: 1000; 
+      font-size: 11px; 
+      width: var(--sidebar-width); 
+    }
+
+    /* 統一向左隱藏動畫 */
+    .hud-hidden #menu, .hud-hidden #infoBar { transform: translateX(var(--sidebar-hide-offset)); opacity: 0; }
 
     #searchBox { margin-bottom: 15px; position: relative; }
     #searchInput {
@@ -67,15 +74,6 @@
     }
     .hud-hidden #compassContainer { transform: scale(0.8); opacity: 0.5; }
 
-    /* 左下資訊欄：優化 Padding 以達成視覺對齊 */
-    #infoBar { 
-      position: absolute; bottom: 60px; left: 20px; 
-      padding: 15px; border-radius: 12px; z-index: 1000; 
-      font-size: 11px; 
-      width: var(--sidebar-width); 
-    }
-    .hud-hidden #infoBar { transform: translateX(var(--sidebar-hide-offset)); opacity: 0; }
-
     .label { font-size: 10px; margin-top: 8px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; }
     select { background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid #555; padding: 6px; width: 100%; border-radius: 6px; font-size: 12px; cursor: pointer; margin-bottom: 8px; }
     .info-item { display: flex; justify-content: space-between; color: #aaa; margin-bottom: 4px; align-items: center; }
@@ -86,10 +84,7 @@
     #status { font-size: 9px; color: #777; margin-top: 8px; text-align: right; }
 
     @media (max-width: 600px) {
-      :root {
-        --sidebar-width: 180px;
-        --sidebar-hide-offset: -220px;
-      }
+      :root { --sidebar-width: 180px; --sidebar-hide-offset: -220px; }
       #infoBar { bottom: 80px; }
       #uiToggle { bottom: 120px; }
     }
@@ -114,7 +109,6 @@
     <div id="searchBox">
       <input type="text" id="searchInput" placeholder="Enter Location or Station...">
     </div>
-
     <div class="label">Railway Layer</div>
     <select id="railwaySelect">
       <option value="standard">Infrastructure</option>
@@ -123,7 +117,6 @@
       <option value="electrification">Electrification</option>
       <option value="gauge">Track Gauge</option>
     </select>
-
     <div class="label">Base Map</div>
     <select id="baseSelect">
       <option value="arcgis_gray">ArcGIS Gray</option>
@@ -143,10 +136,7 @@
   </div>
 
   <div id="infoBar" class="glass-panel">
-    <div class="info-item">
-      <span class="highlight-label">SOLAR TIME</span>
-      <span id="timeVal" class="info-value">--:--:--</span>
-    </div>
+    <div class="info-item"><span class="highlight-label">SOLAR TIME</span><span id="timeVal" class="info-value">--:--:--</span></div>
     <div class="info-item">ZONE: <span id="zoneVal" class="info-value">UTC+0</span></div>
     <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.05); margin: 8px 0;">
     <div class="info-item">LAT: <span id="latVal" class="info-value">--</span></div>
@@ -175,7 +165,7 @@
       initSystem(userToken);
     });
 
-    function initSystem(token) {
+    async function initSystem(token) {
       Cesium.Ion.defaultAccessToken = token;
 
       try {
@@ -186,17 +176,11 @@
           baseLayer: false
         });
 
-        viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
-          e.cancel = true;
-          viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0), duration: 1.5 });
-        });
-
         document.getElementById('tokenOverlay').style.display = 'none';
         uiToggle.style.display = 'flex'; 
         
         const scene = viewer.scene;
         const ssc = scene.screenSpaceCameraController;
-        ssc.constrainedAxis = undefined; 
         ssc.inertiaSpin = 0.88;
 
         let baseLayer = null;
@@ -204,46 +188,42 @@
         let currentRailwayStyle = 'standard';
         let loadTimeout = null;
 
+        // --- 修正後的搜尋邏輯 (處理 CORS 與 User-Agent) ---
         const searchInput = document.getElementById('searchInput');
         searchInput.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
             const query = searchInput.value;
             if (!query) return;
-            
             document.getElementById('status').innerText = "SEARCHING...";
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`)
-              .then(response => response.json())
-              .then(data => {
-                if (data.length > 0) {
-                  const result = data[0];
-                  const lat = parseFloat(result.lat);
-                  const lon = parseFloat(result.lon);
-                  
-                  viewer.camera.flyTo({
-                    destination: Cesium.Cartesian3.fromDegrees(lon, lat, 5000.0),
-                    duration: 2.0
-                  });
-                  document.getElementById('status').innerText = "NAVIGATED";
-                } else {
-                  document.getElementById('status').innerText = "NOT FOUND";
-                }
-              })
-              .catch(() => {
-                document.getElementById('status').innerText = "ERR: API";
-              });
+
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`, {
+              headers: { 'Accept': 'application/json', 'User-Agent': 'RailwayGISMonitor/1.0' }
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (data.length > 0) {
+                viewer.camera.flyTo({
+                  destination: Cesium.Cartesian3.fromDegrees(parseFloat(data[0].lon), parseFloat(data[0].lat), 5000.0),
+                  duration: 2.0
+                });
+                document.getElementById('status').innerText = "NAVIGATED";
+                searchInput.blur();
+              } else { document.getElementById('status').innerText = "NOT FOUND"; }
+            })
+            .catch(() => { document.getElementById('status').innerText = "CORS BLOCKED"; });
           }
         });
 
-        function updateBaseMap(type) {
+        // --- 修正後的底圖邏輯 (解決 1.107 棄用警告) ---
+        async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
           let provider;
-          switch(type) {
-            case 'bing_aerial': provider = Cesium.createWorldImagery({ style: Cesium.IonWorldImageryStyle.AERIAL }); break;
-            case 'osm': provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' }); break;
-            case 'blue_marble': provider = new Cesium.IonImageryProvider({ assetId: 3845 }); break;
-            case 'black_marble': provider = new Cesium.IonImageryProvider({ assetId: 3812 }); break;
-            default: provider = new Cesium.ArcGisMapServerImageryProvider({ url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer' });
-          }
+          if (type === 'bing_aerial') provider = await Cesium.createWorldImageryAsync({ style: Cesium.IonWorldImageryStyle.AERIAL });
+          else if (type === 'osm') provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
+          else if (type === 'blue_marble') provider = await Cesium.IonImageryProvider.fromAssetId(3845);
+          else if (type === 'black_marble') provider = await Cesium.IonImageryProvider.fromAssetId(3812);
+          else provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer');
+          
           baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
         }
 
@@ -252,8 +232,7 @@
           document.getElementById('status').innerText = "SYNCING...";
           railwayLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
             url: `https://{s}.tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png`,
-            subdomains: ['a', 'b', 'c'], 
-            minimumLevel: 1, maximumLevel: 19
+            subdomains: ['a', 'b', 'c'], minimumLevel: 1, maximumLevel: 19
           }));
           setTimeout(() => {
             if (oldLayer) viewer.imageryLayers.remove(oldLayer);
@@ -272,35 +251,34 @@
           document.getElementById('altVal').innerText = alt > 10000 ? (alt/1000).toFixed(0) + " km" : alt.toFixed(0) + " m";
           
           const offsetHours = Math.round(lonDeg / 15);
-          const nowUTC = new Date();
-          const localTheoretical = new Date(nowUTC.getTime() + (offsetHours * 3600000));
-          document.getElementById('timeVal').innerText = localTheoretical.getUTCHours().toString().padStart(2, '0') + ":" + localTheoretical.getUTCMinutes().toString().padStart(2, '0') + ":" + localTheoretical.getUTCSeconds().toString().padStart(2, '0');
+          const now = new Date();
+          const localTime = new Date(now.getTime() + (offsetHours * 3600000));
+          document.getElementById('timeVal').innerText = localTime.getUTCHours().toString().padStart(2, '0') + ":" + localTime.getUTCMinutes().toString().padStart(2, '0') + ":" + localTime.getUTCSeconds().toString().padStart(2, '0');
           document.getElementById('zoneVal').innerText = `UTC${offsetHours >= 0 ? '+' : ''}${offsetHours}`;
           
           const width = scene.canvas.clientWidth;
           const height = scene.canvas.clientHeight;
-          const leftRay = camera.getPickRay(new Cesium.Cartesian2(width / 2 - 50, height / 2));
-          const rightRay = camera.getPickRay(new Cesium.Cartesian2(width / 2 + 50, height / 2));
+          const leftRay = camera.getPickRay(new Cesium.Cartesian2(width/2-50, height/2));
+          const rightRay = camera.getPickRay(new Cesium.Cartesian2(width/2+50, height/2));
           const leftPos = scene.globe.pick(leftRay, scene);
           const rightPos = scene.globe.pick(rightRay, scene);
           if (leftPos && rightPos) {
-            const distance = Cesium.Cartesian3.distance(leftPos, rightPos);
-            document.getElementById('scaleLabel').innerText = distance > 1000 ? (distance / 1000).toFixed(0) + " km" : distance.toFixed(0) + " m";
+            const dist = Cesium.Cartesian3.distance(leftPos, rightPos);
+            document.getElementById('scaleLabel').innerText = dist > 1000 ? (dist/1000).toFixed(0) + " km" : dist.toFixed(0) + " m";
           }
         }
 
         viewer.imageryLayers.removeAll();
-        updateBaseMap('arcgis_gray');
+        await updateBaseMap('arcgis_gray');
         viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0) });
 
         scene.preRender.addEventListener(() => {
-          const rotation = -Cesium.Math.toDegrees(viewer.camera.heading);
-          document.getElementById('compassContainer').style.transform = `rotate(${rotation}deg)`;
+          document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
           updateGISInfo();
         });
 
         document.getElementById('compassContainer').addEventListener('click', () => {
-          viewer.camera.flyTo({ destination: viewer.camera.position, orientation: { heading: 0.0, pitch: Cesium.Math.toRadians(-90.0), roll: 0.0 }, duration: 1.2 });
+          viewer.camera.flyTo({ destination: viewer.camera.position, orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }, duration: 1.2 });
         });
 
         document.getElementById('baseSelect').addEventListener('change', (e) => updateBaseMap(e.target.value));
@@ -316,7 +294,7 @@
 
         executeRailwayLoading('standard');
 
-      } catch (e) { alert("Initialization failed."); location.reload(); }
+      } catch (e) { console.error(e); }
     }
   </script>
 </body>
