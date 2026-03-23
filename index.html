@@ -30,7 +30,6 @@
     
     #infoBar { position: absolute; bottom: 40px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); font-size: 11px; z-index: 1000; transition: 0.5s; display: flex; flex-direction: column; }
 
-    /* Inspector Panel Style */
     #inspectPanel { 
       position: absolute; bottom: 40px; left: 300px; padding: 20px; border-radius: 12px; 
       width: 300px; font-size: 11px; z-index: 999; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -152,24 +151,23 @@
 
         let baseLayer = null, railLayer = null, isRotating = false;
         let cachedTerrain = null;
+        let activeController = null;
 
-        // --- Inspector Logic ---
+        // --- Inspector Logic (Enhanced with Dynamic Radius) ---
         const inspectToggle = document.getElementById('inspectToggle');
         const inspectPanel = document.getElementById('inspectPanel');
         const inspectContent = document.getElementById('inspectContent');
         const inspectClose = document.getElementById('inspectClose');
-        
-        let activeController = null; // 用於管理並取消請求
 
         const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
         handler.setInputAction(async (click) => {
           if (!inspectToggle.checked) return;
 
-          // 若有舊請求正在進行，立即取消
           if (activeController) activeController.abort();
           activeController = new AbortController();
           const { signal } = activeController;
 
+          // 1. 深度拾取優化：優先檢測場景物體（如建築、地形），其次拾取橢球體
           let cartesian = viewer.scene.pickPosition(click.position);
           if (!Cesium.defined(cartesian)) {
             cartesian = viewer.camera.pickEllipsoid(click.position);
@@ -180,49 +178,51 @@
             const lat = Cesium.Math.toDegrees(cartographic.latitude);
             const lon = Cesium.Math.toDegrees(cartographic.longitude);
 
+            // 2. 動態半徑邏輯：根據相機高度調整搜尋精確度
+            const camHeight = viewer.camera.positionCartographic.height;
+            const searchRadius = Math.min(Math.max(camHeight / 500, 50), 500);
+
             inspectPanel.classList.add('active');
-            inspectContent.innerHTML = '<div style="color:#5dade2; animation: pulse 1s infinite;">📡 Querying databases...</div>';
+            inspectContent.innerHTML = `<div style="color:#5dade2; animation: pulse 1s infinite;">📡 Analyzing ${searchRadius.toFixed(0)}m radius...</div>`;
 
             try {
-              const url = `https://overpass-api.de/api/interpreter?data=[out:json];way(around:100,${lat},${lon})[railway];out tags;`;
+              const query = `[out:json][timeout:10];way(around:${searchRadius},${lat},${lon})[railway];out tags center;`;
+              const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+              
               const res = await fetch(url, { signal });
               const data = await res.json();
 
-              const tags = data?.elements[0]?.tags || {};
-              if (Object.keys(tags).length === 0) {
-                inspectContent.innerHTML = "No railway data found at this coordinate.";
+              const element = data?.elements?.[0];
+              const tags = element?.tags || {};
+
+              if (data.elements.length === 0) {
+                inspectContent.innerHTML = `<div style="color:#888">No railway found within ${searchRadius.toFixed(0)}m. <br><br>Try zooming in or clicking closer to the line.</div>`;
                 return;
               }
 
               inspectContent.innerHTML = `
-                <div class="inspect-data"><span class="inspect-label">Infrastructure</span>${tags.railway || '--'} (${tags.usage || 'general'})</div>
+                <div class="inspect-data"><span class="inspect-label">Infrastructure</span>${tags.name || tags.railway || 'Unnamed Track'}</div>
+                <div class="inspect-data"><span class="inspect-label">Usage</span>${tags.usage || 'general'}</div>
                 <div class="inspect-data"><span class="inspect-label">Max Speed</span>${tags.maxspeed || tags['maxspeed:advisory'] || 'Unknown'} km/h</div>
                 <div class="inspect-data"><span class="inspect-label">Signalling</span>${tags['railway:signal:main'] || tags['railway:signal:position'] || 'Not specified'}</div>
                 <div class="inspect-data"><span class="inspect-label">Electrification</span>${tags.electrified || 'No'} ${tags.voltage ? `(${tags.voltage}V)` : ''}</div>
                 <div class="inspect-data"><span class="inspect-label">Gauge</span>${tags.gauge || '1435'} mm</div>
               `;
             } catch (err) {
-              if (err.name === 'AbortError') {
-                console.log('Request cleared.');
-              } else {
+              if (err.name !== 'AbortError') {
                 inspectContent.innerHTML = '<span style="color:#f1948a">Service error. Try again.</span>';
               }
-            } finally {
-              if (activeController && !signal.aborted) activeController = null;
             }
           }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
         inspectClose.onclick = () => {
-          if (activeController) {
-            activeController.abort();
-            activeController = null;
-          }
+          if (activeController) activeController.abort();
           inspectPanel.classList.remove('active');
           setTimeout(() => { inspectContent.innerHTML = ""; }, 500);
         };
 
-        // --- Other System Controls ---
+        // --- System Controls & UI Update ---
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
           e.cancel = true;
           viewer.camera.flyTo({
