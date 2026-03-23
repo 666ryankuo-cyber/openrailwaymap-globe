@@ -153,7 +153,7 @@
         let cachedTerrain = null;
         let activeController = null;
 
-        // --- Inspector Logic ---
+        // --- Inspector Logic (微調版) ---
         const inspectToggle = document.getElementById('inspectToggle');
         const inspectPanel = document.getElementById('inspectPanel');
         const inspectContent = document.getElementById('inspectContent');
@@ -163,14 +163,13 @@
         handler.setInputAction(async (click) => {
           if (!inspectToggle.checked) return;
 
+          // 徹底中斷上一個未完成請求
           if (activeController) activeController.abort();
           activeController = new AbortController();
           const { signal } = activeController;
 
           let cartesian = viewer.scene.pickPosition(click.position);
-          if (!Cesium.defined(cartesian)) {
-            cartesian = viewer.camera.pickEllipsoid(click.position);
-          }
+          if (!Cesium.defined(cartesian)) cartesian = viewer.camera.pickEllipsoid(click.position);
 
           if (cartesian) {
             const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
@@ -180,19 +179,21 @@
             const searchRadius = Math.min(Math.max(camHeight / 500, 50), 500);
 
             inspectPanel.classList.add('active');
-            inspectContent.innerHTML = `<div style="color:#5dade2; animation: pulse 1s infinite;">📡 Analyzing ${searchRadius.toFixed(0)}m radius...</div>`;
+            inspectContent.innerHTML = `<div style="color:#5dade2; animation: pulse 1s infinite;">📡 Querying API... (${searchRadius.toFixed(0)}m)</div>`;
 
             try {
-              const query = `[out:json][timeout:10];way(around:${searchRadius},${lat},${lon})[railway];out tags center;`;
+              const query = `[out:json][timeout:15];way(around:${searchRadius},${lat},${lon})[railway];out tags center;`;
               const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+              
               const res = await fetch(url, { signal });
-              const data = await res.json();
+              if (!res.ok) throw new Error('API_LIMIT'); // 捕捉 429 或 504 錯誤
 
+              const data = await res.json();
               const element = data?.elements?.[0];
               const tags = element?.tags || {};
 
               if (data.elements.length === 0) {
-                inspectContent.innerHTML = `<div style="color:#888">No railway found within ${searchRadius.toFixed(0)}m.</div>`;
+                inspectContent.innerHTML = `<div style="color:#888">No railway nearby.<br><br>Increase zoom level or try another spot.</div>`;
                 return;
               }
 
@@ -205,7 +206,8 @@
                 <div class="inspect-data"><span class="inspect-label">Gauge</span>${tags.gauge || '1435'} mm</div>
               `;
             } catch (err) {
-              if (err.name !== 'AbortError') inspectContent.innerHTML = '<span style="color:#f1948a">Service error.</span>';
+              if (err.name === 'AbortError') return;
+              inspectContent.innerHTML = `<div style="color:#f1948a">API Busy / Timeout.<br><br>Too many requests. Please wait a few seconds.</div>`;
             }
           }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
@@ -216,7 +218,7 @@
           setTimeout(() => { inspectContent.innerHTML = ""; }, 500);
         };
 
-        // --- Home 鍵行為修正：原地上升至 20,000km，俯仰角垂直 ---
+        // --- Home 鍵：原地上升，俯仰角垂直 ---
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
           e.cancel = true;
           const currentPos = viewer.camera.positionCartographic;
@@ -224,16 +226,13 @@
             destination: Cesium.Cartesian3.fromDegrees(
               Cesium.Math.toDegrees(currentPos.longitude), 
               Cesium.Math.toDegrees(currentPos.latitude), 
-              20000000.0 // 預設看見地球的高度
+              20000000.0
             ),
-            orientation: {
-              heading: 0,
-              pitch: Cesium.Math.toRadians(-90), // 垂直向下
-              roll: 0
-            }
+            orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
           });
         });
 
+        // --- 其他 UI 控制邏輯 (與前版相同) ---
         document.getElementById('compassContainer').onclick = () => {
           viewer.camera.flyTo({ destination: viewer.camera.position, orientation: { heading: 0, pitch: viewer.camera.pitch, roll: viewer.camera.roll } });
         };
@@ -328,7 +327,6 @@
         document.getElementById('tokenOverlay').style.display = 'none';
         await updateBaseMap('osm');
         loadRailway('standard');
-        // 初始化視角：(0,0) 全球視角
         viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 } });
 
       } catch (e) { console.error(e); }
