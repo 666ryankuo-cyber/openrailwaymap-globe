@@ -39,6 +39,9 @@
     .inspect-close { position: absolute; top: 10px; right: 10px; cursor: pointer; color: #5dade2; font-size: 18px; font-weight: bold; }
     .inspect-title { color: #5dade2; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid rgba(93,173,226,0.3); padding-bottom: 5px; }
     
+    .inspect-data { margin-bottom: 8px; }
+    .inspect-label { color: #888; font-size: 9px; display: block; text-transform: uppercase; }
+
     .label { font-size: 10px; margin-top: 12px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid rgba(93, 173, 226, 0.3); }
     .sat-header { display: flex; justify-content: space-between; align-items: center; }
     .sat-val { color: #5dade2; font-size: 10px; }
@@ -70,7 +73,6 @@
   <div id="tokenOverlay">
     <div id="loginBox" class="glass-panel">
       <h3 style="color:#5dade2; letter-spacing: 2px; margin-bottom: 5px;">RAILWAY MONITOR</h3>
-      <p style="font-size: 10px; color: #888; margin-bottom: 20px;">CESIUM ION ACCESS TOKEN REQUIRED</p>
       <input type="password" id="tokenInput" placeholder="Paste your token here...">
       <button id="startBtn">INITIALIZE SYSTEM</button>
     </div>
@@ -78,7 +80,7 @@
 
   <div id="cesiumContainer"></div>
 
-  <div id="compassContainer" title="Reset to North & Top-down View">
+  <div id="compassContainer" title="Reset North & Top-down">
     <svg viewBox="0 0 100 100">
       <circle cx="50" cy="50" r="45" stroke="#fff" stroke-width="1" fill="none" opacity="0.3"/>
       <path d="M50,15 L60,50 L50,45 L40,50 Z" fill="#f1948a"/>
@@ -162,63 +164,53 @@
         let baseLayer = null, railLayer = null, isRotating = false;
         let cachedTerrain = null, activeController = null;
 
-        // --- 核心邏輯 1: 指向針校正 (北 + 俯視) ---
+        // --- 核心邏輯: 指向針校正 ---
         document.getElementById('compassContainer').onclick = () => {
           viewer.camera.flyTo({
             destination: viewer.camera.position,
-            orientation: {
-              heading: 0.0,
-              pitch: Cesium.Math.toRadians(-90.0), // 垂直向下
-              roll: 0.0
-            }
+            orientation: { heading: 0.0, pitch: Cesium.Math.toRadians(-90.0), roll: 0.0 }
           });
         };
 
-        // --- 核心邏輯 2: 獨立飽和度控制 ---
-        const baseSatSlider = document.getElementById('baseSatSlider');
-        const railSatSlider = document.getElementById('railSatSlider');
+        // --- 核心邏輯: 獨立飽和度 ---
+        const bSatS = document.getElementById('baseSatSlider');
+        const rSatS = document.getElementById('railSatSlider');
+        const updateBaseSat = () => { if (baseLayer) baseLayer.saturation = parseFloat(bSatS.value); };
+        const updateRailSat = () => { if (railLayer) railLayer.saturation = parseFloat(rSatS.value); };
 
-        const updateBaseSat = () => { if (baseLayer) baseLayer.saturation = parseFloat(baseSatSlider.value); };
-        const updateRailSat = () => { if (railLayer) railLayer.saturation = parseFloat(railSatSlider.value); };
-
-        baseSatSlider.oninput = (e) => {
+        bSatS.oninput = (e) => {
           document.getElementById('baseSatVal').innerText = `${Math.round(e.target.value * 100)}%`;
-          clearTimeout(window.baseSatT);
-          window.baseSatT = setTimeout(updateBaseSat, 200);
+          clearTimeout(window.bt); window.bt = setTimeout(updateBaseSat, 200);
         };
-
-        railSatSlider.oninput = (e) => {
+        rSatS.oninput = (e) => {
           document.getElementById('railSatVal').innerText = `${Math.round(e.target.value * 100)}%`;
-          clearTimeout(window.railSatT);
-          window.railSatT = setTimeout(updateRailSat, 200);
+          clearTimeout(window.rt); window.rt = setTimeout(updateRailSat, 200);
         };
 
-        // --- 基礎地圖載入 (套用獨立飽和度) ---
         async function updateBaseMap(type) {
           if (baseLayer) viewer.imageryLayers.remove(baseLayer);
-          let provider;
+          let p;
           switch(type) {
-            case 'osm': provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' }); break;
-            case 'dark': provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer'); break;
-            case 'arc_std': provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer'); break;
-            case 'arc_sat': provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer'); break;
-            case 'ion_sat': provider = await Cesium.createWorldImageryAsync(); break;
+            case 'osm': p = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' }); break;
+            case 'dark': p = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer'); break;
+            case 'arc_std': p = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer'); break;
+            case 'arc_sat': p = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer'); break;
+            case 'ion_sat': p = await Cesium.createWorldImageryAsync(); break;
           }
-          baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
-          updateBaseSat(); // 載入後立即套用拉條數值
+          baseLayer = viewer.imageryLayers.addImageryProvider(p, 0);
+          updateBaseSat();
         }
 
-        // --- 鐵路層載入 (套用獨立飽和度) ---
         function loadRailway(style) {
           if (railLayer) viewer.imageryLayers.remove(railLayer);
           railLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
             url: `https://{s}.tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png`,
             subdomains: ['a', 'b', 'c']
           }));
-          updateRailSat(); // 載入後立即套用拉條數值
+          updateRailSat();
         }
 
-        // --- Inspector Logic (保持既有防超載邏輯) ---
+        // --- Inspector: 完整顯示所有圖層維度資訊 ---
         const inspectToggle = document.getElementById('inspectToggle');
         const inspectPanel = document.getElementById('inspectPanel');
         const inspectContent = document.getElementById('inspectContent');
@@ -235,31 +227,40 @@
 
           if (cartesian) {
             const carto = Cesium.Cartographic.fromCartesian(cartesian);
+            const lat = Cesium.Math.toDegrees(carto.latitude);
+            const lon = Cesium.Math.toDegrees(carto.longitude);
+            
             inspectPanel.classList.add('active');
-            inspectContent.innerHTML = `<div style="color:#5dade2; animation: pulse 1s infinite;">📡 Querying API...</div>`;
+            inspectContent.innerHTML = `<div style="color:#5dade2; animation: pulse 1s infinite;">📡 Fetching Railway Data...</div>`;
 
             try {
-              const query = `[out:json][timeout:15];way(around:150,${Cesium.Math.toDegrees(carto.latitude)},${Cesium.Math.toDegrees(carto.longitude)})[railway];out tags center;`;
+              // 查詢半徑隨高度動態調整，最小100公尺
+              const radius = Math.max(100, viewer.camera.positionCartographic.height / 500);
+              const query = `[out:json][timeout:15];way(around:${radius},${lat},${lon})[railway];out tags center;`;
               const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`, { signal: activeController.signal });
               const data = await res.json();
               const tags = data?.elements?.[0]?.tags;
 
               if (!tags) {
-                inspectContent.innerHTML = `<div style="color:#888">No data found in range.</div>`;
+                inspectContent.innerHTML = `<div style="color:#888">No railway detected in this sector.</div>`;
               } else {
+                // 完整呈現五個維度與基礎資訊
                 inspectContent.innerHTML = `
-                  <div style="margin-bottom:8px;"><span style="color:#888; font-size:9px;">LINE</span><br>${tags.name || tags.railway}</div>
-                  <div style="margin-bottom:8px;"><span style="color:#888; font-size:9px;">MAX SPEED</span><br>${tags.maxspeed || 'N/A'} km/h</div>
-                  <div style="margin-bottom:8px;"><span style="color:#888; font-size:9px;">GAUGE</span><br>${tags.gauge || '1435'} mm</div>
+                  <div class="inspect-data"><span class="inspect-label">Infrastructure</span>${tags.name || tags.railway || 'Unknown Track'}</div>
+                  <div class="inspect-data"><span class="inspect-label">Usage / Type</span>${tags.usage || 'General'} / ${tags.service || 'Mainline'}</div>
+                  <div class="inspect-data"><span class="inspect-label">Max Speed (Limit)</span>${tags.maxspeed || 'N/A'} km/h</div>
+                  <div class="inspect-data"><span class="inspect-label">Signalling System</span>${tags['railway:signal:main'] || tags['railway:signal:position'] || 'Open Block/Manual'}</div>
+                  <div class="inspect-data"><span class="inspect-label">Electrification</span>${tags.electrified || 'None'} ${tags.voltage ? `(${tags.voltage}V)` : ''}</div>
+                  <div class="inspect-data"><span class="inspect-label">Track Gauge</span>${tags.gauge || '1435'} mm</div>
                 `;
               }
-            } catch (e) { if (e.name !== 'AbortError') inspectContent.innerHTML = "API Busy."; }
+            } catch (e) { if (e.name !== 'AbortError') inspectContent.innerHTML = "API Connection Error."; }
           }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
         inspectClose.onclick = () => { inspectPanel.classList.remove('active'); };
 
-        // --- 其他初始化 ---
+        // --- 初始化與事件響應 ---
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
           e.cancel = true;
           const cp = viewer.camera.positionCartographic;
@@ -279,7 +280,6 @@
         };
 
         viewer.scene.postUpdate.addEventListener(() => { if (isRotating) viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, 0.001); });
-        
         viewer.scene.preRender.addEventListener(() => {
           const c = viewer.camera.positionCartographic;
           if (!c) return;
