@@ -65,6 +65,8 @@
     .info-val { color: #fff; font-weight: bold; }
     #scaleBar { height: 2px; border: 1px solid #fff; border-top: none; width: 80px; margin-top: 5px; }
     .cesium-viewer-toolbar { top: 5px; right: 5px; }
+    
+    @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
   </style>
 </head>
 <body>
@@ -156,12 +158,18 @@
         const inspectPanel = document.getElementById('inspectPanel');
         const inspectContent = document.getElementById('inspectContent');
         const inspectClose = document.getElementById('inspectClose');
+        
+        let activeController = null; // 用於管理並取消請求
 
         const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
         handler.setInputAction(async (click) => {
           if (!inspectToggle.checked) return;
 
-          // 使用 pickPosition 以支援 3D 地形下的精確點擊
+          // 若有舊請求正在進行，立即取消
+          if (activeController) activeController.abort();
+          activeController = new AbortController();
+          const { signal } = activeController;
+
           let cartesian = viewer.scene.pickPosition(click.position);
           if (!Cesium.defined(cartesian)) {
             cartesian = viewer.camera.pickEllipsoid(click.position);
@@ -176,9 +184,8 @@
             inspectContent.innerHTML = '<div style="color:#5dade2; animation: pulse 1s infinite;">📡 Querying databases...</div>';
 
             try {
-              // 優化 API 請求：增加搜索半徑以提高命中率
               const url = `https://overpass-api.de/api/interpreter?data=[out:json];way(around:100,${lat},${lon})[railway];out tags;`;
-              const res = await fetch(url);
+              const res = await fetch(url, { signal });
               const data = await res.json();
 
               const tags = data?.elements[0]?.tags || {};
@@ -187,7 +194,6 @@
                 return;
               }
 
-              // 整合規格要求的五項資訊
               inspectContent.innerHTML = `
                 <div class="inspect-data"><span class="inspect-label">Infrastructure</span>${tags.railway || '--'} (${tags.usage || 'general'})</div>
                 <div class="inspect-data"><span class="inspect-label">Max Speed</span>${tags.maxspeed || tags['maxspeed:advisory'] || 'Unknown'} km/h</div>
@@ -196,12 +202,22 @@
                 <div class="inspect-data"><span class="inspect-label">Gauge</span>${tags.gauge || '1435'} mm</div>
               `;
             } catch (err) {
-              inspectContent.innerHTML = '<span style="color:#f1948a">Service error. Try again.</span>';
+              if (err.name === 'AbortError') {
+                console.log('Request cleared.');
+              } else {
+                inspectContent.innerHTML = '<span style="color:#f1948a">Service error. Try again.</span>';
+              }
+            } finally {
+              if (activeController && !signal.aborted) activeController = null;
             }
           }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
         inspectClose.onclick = () => {
+          if (activeController) {
+            activeController.abort();
+            activeController = null;
+          }
           inspectPanel.classList.remove('active');
           setTimeout(() => { inspectContent.innerHTML = ""; }, 500);
         };
