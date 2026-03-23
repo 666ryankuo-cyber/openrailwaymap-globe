@@ -210,7 +210,7 @@
           updateRailSat();
         }
 
-        // --- Inspector: 完整顯示所有圖層維度資訊 ---
+        // --- Inspector Logic ---
         const inspectToggle = document.getElementById('inspectToggle');
         const inspectPanel = document.getElementById('inspectPanel');
         const inspectContent = document.getElementById('inspectContent');
@@ -234,7 +234,6 @@
             inspectContent.innerHTML = `<div style="color:#5dade2; animation: pulse 1s infinite;">📡 Fetching Railway Data...</div>`;
 
             try {
-              // 查詢半徑隨高度動態調整，最小100公尺
               const radius = Math.max(100, viewer.camera.positionCartographic.height / 500);
               const query = `[out:json][timeout:15];way(around:${radius},${lat},${lon})[railway];out tags center;`;
               const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`, { signal: activeController.signal });
@@ -242,30 +241,65 @@
               const tags = data?.elements?.[0]?.tags;
 
               if (!tags) {
-                inspectContent.innerHTML = `<div style="color:#888">No railway detected in this sector.</div>`;
+                inspectContent.innerHTML = `<div style="color:#888">No railway detected.</div>`;
               } else {
-                // 完整呈現五個維度與基礎資訊
                 inspectContent.innerHTML = `
-                  <div class="inspect-data"><span class="inspect-label">Infrastructure</span>${tags.name || tags.railway || 'Unknown Track'}</div>
-                  <div class="inspect-data"><span class="inspect-label">Usage / Type</span>${tags.usage || 'General'} / ${tags.service || 'Mainline'}</div>
-                  <div class="inspect-data"><span class="inspect-label">Max Speed (Limit)</span>${tags.maxspeed || 'N/A'} km/h</div>
-                  <div class="inspect-data"><span class="inspect-label">Signalling System</span>${tags['railway:signal:main'] || tags['railway:signal:position'] || 'Open Block/Manual'}</div>
-                  <div class="inspect-data"><span class="inspect-label">Electrification</span>${tags.electrified || 'None'} ${tags.voltage ? `(${tags.voltage}V)` : ''}</div>
-                  <div class="inspect-data"><span class="inspect-label">Track Gauge</span>${tags.gauge || '1435'} mm</div>
+                  <div class="inspect-data"><span class="inspect-label">Infrastructure</span>${tags.name || tags.railway || 'Unknown'}</div>
+                  <div class="inspect-data"><span class="inspect-label">Usage / Type</span>${tags.usage || 'N/A'} / ${tags.service || 'N/A'}</div>
+                  <div class="inspect-data"><span class="inspect-label">Max Speed</span>${tags.maxspeed || 'N/A'} km/h</div>
+                  <div class="inspect-data"><span class="inspect-label">Signalling</span>${tags['railway:signal:main'] || 'Manual'}</div>
+                  <div class="inspect-data"><span class="inspect-label">Electrification</span>${tags.electrified || 'None'}</div>
+                  <div class="inspect-data"><span class="inspect-label">Gauge</span>${tags.gauge || '1435'} mm</div>
                 `;
               }
-            } catch (e) { if (e.name !== 'AbortError') inspectContent.innerHTML = "API Connection Error."; }
+            } catch (e) { if (e.name !== 'AbortError') inspectContent.innerHTML = "API Error."; }
           }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
         inspectClose.onclick = () => { inspectPanel.classList.remove('active'); };
 
-        // --- 初始化與事件響應 ---
+        // --- HUD 更新邏輯: 日時, 時區, 比例尺 ---
+        function updateHUD() {
+          const c = viewer.camera.positionCartographic;
+          if (!c) return;
+
+          const lat = Cesium.Math.toDegrees(c.latitude);
+          const lon = Cesium.Math.toDegrees(c.longitude);
+
+          // 1. 計算時區 (UTC Offset) 與 Solar Time
+          const utcOffset = Math.round(lon / 15);
+          const now = new Date();
+          const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+          const solarDate = new Date(utc + (3600000 * utcOffset));
+          
+          document.getElementById('timeVal').innerText = solarDate.toTimeString().split(' ')[0];
+          document.getElementById('tzVal').innerText = `UTC ${utcOffset >= 0 ? '+' : ''}${utcOffset}`;
+          document.getElementById('latVal').innerText = `${lat.toFixed(4)}°`;
+          document.getElementById('lonVal').innerText = `${lon.toFixed(4)}°`;
+          document.getElementById('altVal').innerText = `${(c.height/1000).toFixed(1)} km`;
+
+          // 2. 指南針旋轉
+          document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
+
+          // 3. 比例尺動態計算 (基於相機高度與畫布寬度)
+          const width = viewer.scene.canvas.clientWidth;
+          const height = viewer.camera.positionCartographic.height;
+          const leftPos = viewer.camera.pickEllipsoid(new Cesium.Cartesian2(0, viewer.scene.canvas.clientHeight / 2));
+          const rightPos = viewer.camera.pickEllipsoid(new Cesium.Cartesian2(80, viewer.scene.canvas.clientHeight / 2));
+          
+          if (leftPos && rightPos) {
+            const distance = Cesium.Cartesian3.distance(leftPos, rightPos) / 1000;
+            document.getElementById('scaleLabel').innerText = distance > 1 ? `${distance.toFixed(1)} KM` : `${(distance*1000).toFixed(0)} M`;
+          }
+        }
+
+        viewer.scene.preRender.addEventListener(updateHUD);
+
+        // --- 其他系統功能 ---
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
           e.cancel = true;
-          const cp = viewer.camera.positionCartographic;
           viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(Cesium.Math.toDegrees(cp.longitude), Cesium.Math.toDegrees(cp.latitude), 20000000.0),
+            destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0),
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
           });
         });
@@ -280,15 +314,6 @@
         };
 
         viewer.scene.postUpdate.addEventListener(() => { if (isRotating) viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, 0.001); });
-        viewer.scene.preRender.addEventListener(() => {
-          const c = viewer.camera.positionCartographic;
-          if (!c) return;
-          const lon = Cesium.Math.toDegrees(c.longitude);
-          document.getElementById('latVal').innerText = `${Cesium.Math.toDegrees(c.latitude).toFixed(4)}°`;
-          document.getElementById('lonVal').innerText = `${lon.toFixed(4)}°`;
-          document.getElementById('altVal').innerText = `${(c.height/1000).toFixed(1)} km`;
-          document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
-        });
 
         document.getElementById('tokenOverlay').style.display = 'none';
         await updateBaseMap('osm');
