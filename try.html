@@ -23,6 +23,7 @@
     #startBtn { background: #5dade2; color: #fff; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
 
     :root { --sidebar-width: 260px; }
+    /* HUD 收納邏輯：包含左側面板與資訊欄 */
     .hud-hidden #menu, .hud-hidden #infoBar, .hud-hidden #inspectPanel { transform: translateX(-400px) !important; opacity: 0; }
     
     #menu { position: absolute; top: 20px; left: 20px; padding: 20px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; transition: 0.5s; overflow-y: auto; max-height: 85vh; }
@@ -59,9 +60,18 @@
     input:checked + .slider { background: #5dade2; }
     input:checked + .slider:before { transform: translateX(16px); }
 
-    /* 修復與調整: 指南針背景、HUB鍵位置 */
-    #compassContainer { position: absolute; top: 80px; right: 20px; width: 50px; height: 50px; z-index: 1000; cursor: pointer; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
-    #hudToggle { position: absolute; bottom: 120px; right: 20px; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; z-index: 1001; display: flex; justify-content: center; align-items: center; font-size: 20px; }
+    /* 右側控制按鈕群組 - 風格統一 (磨砂玻璃、不透明、圓形) */
+    .ctrl-btn { 
+      position: absolute; right: 20px; width: 50px; height: 50px; border-radius: 50%; 
+      cursor: pointer; z-index: 1000; display: flex; justify-content: center; align-items: center;
+      background: rgba(20, 20, 20, 0.95); border: 1px solid rgba(255,255,255,0.2);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: 0.3s;
+    }
+    .ctrl-btn:hover { border-color: #5dade2; }
+
+    #compassContainer { top: 80px; }
+    #homeBtn { top: 140px; font-size: 20px; }
+    #hudToggle { bottom: 120px; font-size: 20px; } /* HUB鍵位置上移，避免遮擋 infoBar */
 
     .info-item { display: flex; justify-content: space-between; margin-bottom: 4px; color: #888; }
     .info-val { color: #fff; font-weight: bold; }
@@ -82,15 +92,16 @@
 
   <div id="cesiumContainer"></div>
 
-  <div id="compassContainer" class="glass-panel" title="Reset North">
-    <svg viewBox="0 0 100 100" style="width: 80%; height: 80%;">
+  <div id="compassContainer" class="ctrl-btn" title="Reset North">
+    <svg viewBox="0 0 100 100" style="width: 75%; height: 75%;">
       <circle cx="50" cy="50" r="45" stroke="#fff" stroke-width="1" fill="none" opacity="0.3"/>
       <path d="M50,15 L60,50 L50,45 L40,50 Z" fill="#f1948a"/>
       <path d="M50,85 L60,50 L50,55 L40,50 Z" fill="#5dade2"/>
     </svg>
   </div>
   
-  <div id="hudToggle" class="glass-panel">🛰️</div>
+  <div id="homeBtn" class="ctrl-btn" title="Vertical Rise (20,000 km)">🏠</div>
+  <div id="hudToggle" class="ctrl-btn">🛰️</div>
   
   <div id="menu" class="glass-panel">
     <input type="text" id="searchInput" placeholder="Station Search (Press Enter)..." autocomplete="off">
@@ -158,8 +169,8 @@
       Cesium.Ion.defaultAccessToken = token;
       try {
         const viewer = new Cesium.Viewer('cesiumContainer', {
-          baseLayerPicker: false, geocoder: false, homeButton: true, infoBox: false,
-          timeline: false, animation: false, baseLayer: false,
+          baseLayerPicker: false, geocoder: false, homeButton: false, // 隱藏預設 Home 鍵
+          infoBox: false, timeline: false, animation: false, baseLayer: false,
           terrainProvider: new Cesium.EllipsoidTerrainProvider()
         });
 
@@ -167,7 +178,7 @@
         let baseLayer = null, railLayer = null, buildingLayer = null;
         let isRotating = false, cachedTerrain = null, activeController = null;
 
-        // --- 車站搜尋優化 (精準修正) ---
+        // --- 車站搜尋與圓形標記 ---
         const searchInput = document.getElementById('searchInput');
         searchInput.addEventListener('keypress', async (e) => {
           if (e.key === 'Enter') {
@@ -182,7 +193,6 @@
                 const { lat, lon } = data[0];
                 const destination = Cesium.Cartesian3.fromDegrees(parseFloat(lon), parseFloat(lat));
                 
-                // 移除標記並新增藍色圓形 Point
                 viewer.entities.removeAll();
                 viewer.entities.add({
                   position: destination,
@@ -194,52 +204,32 @@
                   orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
                 });
                 
-                searchInput.value = ''; // 搜尋成功後清空
+                searchInput.value = ''; // 清空
                 searchInput.blur();     // 取消聚焦
               } else {
                 searchInput.style.borderColor = '#f1948a';
                 setTimeout(() => searchInput.style.borderColor = '', 1000);
               }
-            } catch (err) {
-              console.error("Search error:", err);
-            } finally {
-              searchInput.disabled = false;
-            }
+            } catch (err) { console.error("Search error:", err); }
+            finally { searchInput.disabled = false; }
           }
         });
 
-        // 點擊地圖任何位置移除搜尋標記
+        // 點擊地圖移除標記
         viewer.screenSpaceEventHandler.setInputAction(() => {
           viewer.entities.removeAll();
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-        // 3D 建築物
-        document.getElementById('buildingToggle').onchange = async (e) => {
-          if (e.target.checked) {
-            if (!buildingLayer) buildingLayer = await Cesium.Cesium3DTileset.fromIonAssetId(96188);
-            viewer.scene.primitives.add(buildingLayer);
-          } else if (buildingLayer) {
-            viewer.scene.primitives.remove(buildingLayer);
-          }
-        };
-
-        // 日照機制
-        document.getElementById('lightToggle').onchange = (e) => {
-          viewer.scene.globe.enableLighting = e.target.checked;
-          viewer.scene.shadowMap.enabled = e.target.checked;
-        };
-
-        // Home 鍵修正: 原地垂直升高
-        viewer.homeButton.viewModel.command.beforeExecute.addEventListener((e) => {
-          e.cancel = true;
+        // 自製 Home 鍵：原地垂直升高
+        document.getElementById('homeBtn').onclick = () => {
           const cp = viewer.camera.positionCartographic;
           viewer.camera.flyTo({
             destination: Cesium.Cartesian3.fromDegrees(Cesium.Math.toDegrees(cp.longitude), Cesium.Math.toDegrees(cp.latitude), DEFAULT_HEIGHT),
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
           });
-        });
+        };
 
-        // 指南針
+        // 指南針：歸正向北
         document.getElementById('compassContainer').onclick = () => {
           viewer.camera.flyTo({
             destination: viewer.camera.position,
@@ -247,7 +237,21 @@
           });
         };
 
-        // 飽和度與地圖更新
+        // 3D 建築物
+        document.getElementById('buildingToggle').onchange = async (e) => {
+          if (e.target.checked) {
+            if (!buildingLayer) buildingLayer = await Cesium.Cesium3DTileset.fromIonAssetId(96188);
+            viewer.scene.primitives.add(buildingLayer);
+          } else if (buildingLayer) { viewer.scene.primitives.remove(buildingLayer); }
+        };
+
+        // 日照開關
+        document.getElementById('lightToggle').onchange = (e) => {
+          viewer.scene.globe.enableLighting = e.target.checked;
+          viewer.scene.shadowMap.enabled = e.target.checked;
+        };
+
+        // 飽和度處理
         const bSatS = document.getElementById('baseSatSlider');
         const rSatS = document.getElementById('railSatSlider');
         const updateBaseSat = () => { if (baseLayer) baseLayer.saturation = parseFloat(bSatS.value); };
@@ -279,13 +283,12 @@
         function loadRailway(style) {
           if (railLayer) viewer.imageryLayers.remove(railLayer);
           railLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
-            url: `https://{s}.tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png`,
-            subdomains: ['a', 'b', 'c']
+            url: `https://{s}.tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png`, subdomains: ['a', 'b', 'c']
           }));
           updateRailSat();
         }
 
-        // Inspector 邏輯保持不變
+        // Inspector 邏輯 (完全保留原本版本)
         const inspectToggle = document.getElementById('inspectToggle');
         const inspectPanel = document.getElementById('inspectPanel');
         const inspectContent = document.getElementById('inspectContent');
@@ -326,11 +329,13 @@
 
         inspectClose.onclick = () => { inspectPanel.classList.remove('active'); };
 
-        // HUD 數據同步: 基於「相機位置 (Camera Position)」而非螢幕中心
+        // 核心修正：數據同步至「相機位置 (Camera Position)」
         function updateHUD() {
           const c = viewer.camera.positionCartographic;
           if (!c) return;
           const lat = Cesium.Math.toDegrees(c.latitude), lon = Cesium.Math.toDegrees(c.longitude);
+          
+          // 基於相機經度的太陽時計算
           const utcOffset = Math.round(lon / 15);
           const now = new Date();
           const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -341,9 +346,11 @@
           document.getElementById('latVal').innerText = `${lat.toFixed(4)}°`;
           document.getElementById('lonVal').innerText = `${lon.toFixed(4)}°`;
           document.getElementById('altVal').innerText = `${(c.height/1000).toFixed(1)} km`;
+          
+          // 指南針旋轉
           document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
           
-          // 比例尺計算
+          // 比例尺 (基於相機當前視角 pickEllipsoid)
           const leftPos = viewer.camera.pickEllipsoid(new Cesium.Cartesian2(0, viewer.scene.canvas.clientHeight / 2));
           const rightPos = viewer.camera.pickEllipsoid(new Cesium.Cartesian2(80, viewer.scene.canvas.clientHeight / 2));
           if (leftPos && rightPos) {
@@ -353,7 +360,7 @@
         }
         viewer.scene.preRender.addEventListener(updateHUD);
 
-        // 初始化與其他控制
+        // 初始化
         document.getElementById('baseSelect').onchange = (e) => updateBaseMap(e.target.value);
         document.getElementById('railwaySelect').onchange = (e) => loadRailway(e.target.value);
         document.getElementById('rotateToggle').onchange = (e) => isRotating = e.target.checked;
@@ -367,7 +374,10 @@
         document.getElementById('tokenOverlay').style.display = 'none';
         await updateBaseMap('osm');
         loadRailway('standard');
-        viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(0, 0, DEFAULT_HEIGHT), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 } });
+        viewer.camera.setView({ 
+          destination: Cesium.Cartesian3.fromDegrees(0, 0, DEFAULT_HEIGHT), 
+          orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 } 
+        });
 
       } catch (e) { console.error(e); }
     }
