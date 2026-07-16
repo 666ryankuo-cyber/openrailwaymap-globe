@@ -7,10 +7,10 @@
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.105/Build/Cesium/Cesium.js"></script>
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.105/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <style>
-    <!-- ===== 全局樣式與基礎容器 ===== -->
+    /* ===== 全局樣式與基礎容器 ===== */
     html, body, #cesiumContainer { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #000; }
     
-    <!-- ===== 玻璃風格面板（毛玻璃效果） ===== -->
+    /* ===== 玻璃風格面板（毛玻璃效果） ===== */
     .glass-panel {
       background: rgba(20, 20, 20, 0.85); 
       color: #fff; border: 1px solid rgba(255,255,255,0.1); 
@@ -20,25 +20,25 @@
       box-sizing: border-box; 
     }
 
-    <!-- ===== 令牌登錄界面樣式 ===== -->
+    /* ===== 令牌登錄界面樣式 ===== */
     #tokenOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 9999; background: #000; }
     #loginBox { padding: 40px; border-radius: 12px; width: 400px; text-align: center; border: 1px solid #333; }
     #tokenInput { width: 100%; padding: 12px; margin: 20px 0; border-radius: 6px; border: 1px solid #444; background: #111; color: #fff; text-align: center; box-sizing: border-box; }
     #startBtn { background: #5dade2; color: #fff; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
 
-    <!-- ===== 側邊欄寬度變數與 HUD 隱藏效果 ===== -->
+    /* ===== 側邊欄寬度變數與 HUD 隱藏效果 ===== */
     :root { --sidebar-width: 260px; }
     .hud-hidden #menu, .hud-hidden #infoBar, .hud-hidden #inspectPanel { transform: translateX(-400px) !important; opacity: 0; }
     
-    <!-- ===== 左側菜單面板樣式 ===== -->
+    /* ===== 左側菜單面板樣式 ===== */
     #menu { position: absolute; top: 20px; left: 20px; padding: 20px; border-radius: 12px; width: var(--sidebar-width); z-index: 1000; transition: 0.5s; overflow-y: auto; max-height: 85vh; }
     #searchInput { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; outline: none; margin-bottom: 10px; font-size: 12px; }
     #searchInput:focus { border-color: #5dade2; }
     
-    <!-- ===== 左下角信息欄樣式 ===== -->
+    /* ===== 左下角信息欄樣式 ===== */
     #infoBar { position: absolute; bottom: 40px; left: 20px; padding: 15px; border-radius: 12px; width: var(--sidebar-width); font-size: 11px; z-index: 1000; transition: 0.5s; display: flex; flex-direction: column; }
 
-    <!-- ===== 鐵路檢查器面板樣式 ===== -->
+    /* ===== 鐵路檢查器面板樣式 ===== */
     #inspectPanel { 
       position: absolute; bottom: 40px; left: 300px; padding: 20px; border-radius: 12px; 
       width: 300px; font-size: 11px; z-index: 999; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -51,16 +51,16 @@
     .inspect-data { margin-bottom: 8px; }
     .inspect-label { color: #888; font-size: 9px; display: block; text-transform: uppercase; }
 
-    <!-- ===== 菜單標籤與飽和度顯示 ===== -->
+    /* ===== 菜單標籤與飽和度顯示 ===== */
     .label { font-size: 10px; margin-top: 12px; margin-bottom: 5px; color: #5dade2; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid rgba(93, 173, 226, 0.3); }
     .sat-header { display: flex; justify-content: space-between; align-items: center; }
     .sat-val { color: #5dade2; font-size: 10px; }
     
-    <!-- ===== 范圍滑塊樣式 ===== -->
+    /* ===== 范圍滑塊樣式 ===== */
     input[type="range"] { -webkit-appearance: none; width: 100%; background: #333; height: 4px; border-radius: 2px; margin: 10px 0; outline: none; }
     input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: #5dade2; border-radius: 50%; cursor: pointer; }
 
-    <!-- ===== 下拉菜單與開關樣式 ===== -->
+    /* ===== 下拉菜單與開關樣式 ===== */
     select { background: #000; color: #fff; border: 1px solid #444; width: 100%; padding: 6px; border-radius: 4px; margin-bottom: 8px; font-size: 12px; }
     .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; font-size: 11px; }
     .switch { position: relative; width: 34px; height: 18px; }
@@ -70,17 +70,17 @@
     input:checked + .slider { background: #5dade2; }
     input:checked + .slider:before { transform: translateX(16px); }
 
-    <!-- ===== 右側控制按鈕（指南針、主頁、HUD 切換） ===== -->
-    #compassContainer { position: absolute; top: 80px; right: 20px; width: 50px; height: 50px; z-index: 1000; cursor: pointer; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
-    #customHomeBtn { position: absolute; top: 140px; right: 20px; width: 50px; height: 50px; z-index: 1000; cursor: pointer; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+    /* ===== 右側控制按鈕（指南針、主頁、HUD 切換） ===== */
+    #compassContainer { position: absolute; top: 80px; right: 20px; width: 50px; height: 50px; z-index: 1000; cursor: pointer; border-radius: 50%; display: flex; justify-content: center; align-items: center; background: rgba(20, 20, 20, 0.7); }
+    #customHomeBtn { position: absolute; top: 140px; right: 20px; width: 50px; height: 50px; z-index: 1000; cursor: pointer; border-radius: 50%; display: flex; justify-content: center; align-items: center; background: rgba(20, 20, 20, 0.7); }
     #hudToggle { position: absolute; bottom: 120px; right: 20px; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; z-index: 1001; display: flex; justify-content: center; align-items: center; }
 
-    <!-- ===== 信息欄項目和縮放條樣式 ===== -->
+    /* ===== 信息欄項目和縮放條樣式 ===== */
     .info-item { display: flex; justify-content: space-between; margin-bottom: 4px; color: #888; }
     .info-val { color: #fff; font-weight: bold; }
     #scaleBar { height: 2px; border: 1px solid #fff; border-top: none; width: 80px; margin-top: 5px; }
     
-    <!-- ===== 脈沖動畫效果 ===== -->
+    /* ===== 脈沖動畫效果 ===== */
     @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
   </style>
 </head>
