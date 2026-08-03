@@ -15,11 +15,11 @@
 
     #tokenOverlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 9999; }
     #loginBox { width: 360px; text-align: center; }
-    #tokenInput { width: 100%; padding: 8px; margin: 10px 0; border-radius: 4px; border: 1px solid #444; background: #111; color: #fff; }
-    #startBtn { width: 100%; padding: 8px; background: #5dade2; border: none; color: #fff; border-radius: 4px; cursor: pointer; }
+    #tokenInput { width: 100%; padding: 8px; margin: 10px 0; border-radius: 4px; border: 1px solid #444; background: #111; color: #fff; box-sizing: border-box; }
+    #startBtn { width: 100%; padding: 8px; background: #5dade2; border: none; color: #fff; border-radius: 4px; cursor: pointer; box-sizing: border-box; }
 
     #menu { position: absolute; top: 20px; left: 20px; width: var(--sidebar-width); max-height: 80vh; overflow: auto; z-index: 1000; }
-    #searchInput { width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #444; background: #111; color: #fff; }
+    #searchInput { width: 100%; padding: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #444; background: #111; color: #fff; box-sizing: border-box; }
 
     #infoBar { position: absolute; bottom: 20px; left: 20px; width: var(--sidebar-width); z-index: 1000; }
 
@@ -27,14 +27,14 @@
     #inspectPanel.active { display: block; }
     .inspect-close { float: right; cursor: pointer; color: #5dade2; }
 
-    #compassContainer, #customHomeBtn, #hudToggle { position: absolute; right: 20px; width: 44px; height: 44px; z-index: 1000; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
+    #compassContainer, #customHomeBtn, #hudToggle { position: absolute; right: 20px; width: 44px; height: 44px; z-index: 1000; display: flex; align-items: center; justify-content: center; border-radius: 4px; background: rgba(0,0,0,0.7); cursor: pointer; }
     #compassContainer { top: 80px; }
     #customHomeBtn { top: 140px; }
     #hudToggle { bottom: 120px; }
 
     .label { font-size: 12px; color: #5dade2; font-weight: 600; margin-top: 8px; margin-bottom: 4px; }
     .switch-container { display: flex; align-items: center; justify-content: space-between; margin: 6px 0; }
-    select, input[type="range"] { width: 100%; margin-bottom: 6px; }
+    select, input[type="range"] { width: 100%; margin-bottom: 6px; box-sizing: border-box; }
     .info-item { display: flex; justify-content: space-between; margin-bottom: 4px; color: #ccc; }
     .info-val { color: #fff; font-weight: bold; }
 
@@ -171,7 +171,7 @@
           viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(Cesium.Math.toDegrees(cp.longitude), Cesium.Math.toDegrees(cp.latitude), DEFAULT_HEIGHT), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 } });
         };
 
-        document.getElementById('buildingToggle').onchange = async (e) => { if (e.target.checked) { if (!buildingLayer) buildingLayer = await Cesium.Cesium3DTileset.fromIonAssetId(96188); viewer.scene.primitives.add(buildingLayer); } else if (buildingLayer) viewer.scene.primitives.remove(buildingLayer); };
+        document.getElementById('buildingToggle').onchange = async (e) => { if (e.target.checked) { if (!buildingLayer) buildingLayer = await Cesium.Cesium3DTileset.fromIonAssetId(96188); viewer.scene.primitives.add(buildingLayer); } else if (buildingLayer) viewer.scene.primitives.remove(buildingLayer, true); };
 
         document.getElementById('lightToggle').onchange = (e) => { viewer.scene.globe.enableLighting = e.target.checked; viewer.scene.shadowMap.enabled = e.target.checked; };
 
@@ -198,7 +198,7 @@
           updateBaseSat();
         }
 
-        function loadRailway(style) { if (railLayer) viewer.imageryLayers.remove(railLayer); railLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({ url: `https://{s}.tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png`, subdomains: ['a','b','c'] })); updateRailSat(); }
+        function loadRailway(style) { if (railLayer) viewer.imageryLayers.remove(railLayer); railLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({ url: `https://tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png` })); updateRailSat(); }
 
         const inspectToggle = document.getElementById('inspectToggle');
         const inspectPanel = document.getElementById('inspectPanel');
@@ -220,7 +220,7 @@
             const data = await res.json(); const element = data?.elements?.[0]; const tags = element?.tags;
             if (!tags) { inspectContent.innerHTML = `<div style="color:#888">No railway data found within ${radius}m.</div>`; }
             else {
-              inspectContent.innerHTML = `\n                <div class="inspect-data"><span class="inspect-label">Infrastructure</span>${tags.name || tags.railway || 'Unknown Track'}</div>\n                <div class="inspect-data"><span class="inspect-label">Usage / Type</span>${tags.usage || 'N/A'} / ${tags.service || 'N/A'}</div>\n                <div class="inspect-data"><span class="inspect-label">Max Speed</span>${tags.maxspeed ? tags.maxspeed + ' km/h' : 'N/A'}</div>\n                <div class="inspect-data"><span class="inspect-label">Signalling</span>${tags['railway:signal:main'] || tags['railway:control_command_and_signalling'] || 'Standard'}</div>\n                <div class="inspect-data"><span class="inspect-label">Electrification</span>${tags.electrified || 'None'}</div>\n                <div class="inspect-data"><span class="inspect-label">Gauge</span>${tags.gauge || '1435'} mm</div>\n                <div style="font-size:10px; color:#ccc; margin-top:5px;">ID: ${element.id} | R: ${radius}m</div>`;
+              inspectContent.innerHTML = `<div class="inspect-data"><span class="inspect-label">Infrastructure</span>${tags.name || tags.railway || 'Unknown Track'}</div>`;
             }
           } catch (e) { if (e.name === 'AbortError') return; inspectContent.innerHTML = `<div style="color:#f1948a">Connection Error.</div>`; }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
@@ -240,7 +240,7 @@
           document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
           const leftPos = viewer.camera.pickEllipsoid(new Cesium.Cartesian2(0, viewer.scene.canvas.clientHeight / 2));
           const rightPos = viewer.camera.pickEllipsoid(new Cesium.Cartesian2(80, viewer.scene.canvas.clientHeight / 2));
-          if (leftPos && rightPos) { const distance = Cesium.Cartesian3.distance(leftPos, rightPos) / 1000; document.getElementById('scaleLabel').innerText = distance > 1 ? `${distance.toFixed(1)} KM` : `${(distance*1000).toFixed(0)} M`; }
+          if (leftPos && rightPos) { const distance = Cesium.Cartesian3.distance(leftPos, rightPos) / 1000; document.getElementById('scaleLabel').innerText = distance > 1 ? `${distance.toFixed(1)} KM` : `${(distance * 1000).toFixed(0)} M`; }
         }
         viewer.scene.preRender.addEventListener(updateHUD);
 
