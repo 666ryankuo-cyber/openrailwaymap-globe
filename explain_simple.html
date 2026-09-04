@@ -27,7 +27,7 @@
     #inspectPanel.active { display: block; }
     .inspect-close { float: right; cursor: pointer; color: #5dade2; }
 
-    #compassContainer, #customHomeBtn, #hudToggle { position: absolute; right: 20px; width: 44px; height: 44px; z-index: 1000; display: flex; align-items: center; justify-content: center; border-radius: 4px; background: rgba(0,0,0,0.7); cursor: pointer; }
+    #compassContainer, #customHomeBtn, #hudToggle { position: absolute; right: 20px; width: 44px; height: 44px; z-index: 1000; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
     #compassContainer { top: 80px; }
     #customHomeBtn { top: 140px; }
     #hudToggle { bottom: 120px; }
@@ -122,144 +122,452 @@
   </div>
 
   <script>
-    // Preserve original JS functionality; only layout/CSS simplified.
-    const startBtn = document.getElementById('startBtn');
-    startBtn.onclick = () => {
-      const token = document.getElementById('tokenInput').value.trim();
-      if (token) initSystem(token);
-    };
-
-    async function initSystem(token) {
-      Cesium.Ion.defaultAccessToken = token;
-      try {
-        const viewer = new Cesium.Viewer('cesiumContainer', {
-          baseLayerPicker: false, geocoder: false, homeButton: false, infoBox: false,
-          timeline: false, animation: false, baseLayer: false,
-          terrainProvider: new Cesium.EllipsoidTerrainProvider()
-        });
-
-        const DEFAULT_HEIGHT = 20000000.0;
-        let baseLayer = null, railLayer = null, buildingLayer = null;
-        let isRotating = false, cachedTerrain = null, activeController = null;
-
-        const searchInput = document.getElementById('searchInput');
-        searchInput.addEventListener('keypress', async (e) => {
-          if (e.key === 'Enter') {
-            const query = searchInput.value.trim();
-            if (!query) return;
-            searchInput.disabled = true;
-            try {
-              const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ' station')}&limit=1`);
-              const data = await response.json();
-              if (data && data.length > 0) {
-                const { lat, lon } = data[0];
-                const destination = Cesium.Cartesian3.fromDegrees(parseFloat(lon), parseFloat(lat));
-                viewer.entities.removeAll();
-                viewer.entities.add({ position: destination, point: { pixelSize: 12, color: Cesium.Color.fromCssColorString('#5dade2'), outlineColor: Cesium.Color.WHITE, outlineWidth: 2 } });
-                viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(parseFloat(lon), parseFloat(lat), 15000), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 } });
-                searchInput.value = '';
-                searchInput.blur();
-              } else { searchInput.style.borderColor = '#f1948a'; setTimeout(() => searchInput.style.borderColor = '', 1000); }
-            } catch (err) { console.error(err); } finally { searchInput.disabled = false; }
-          }
-        });
-
-        viewer.screenSpaceEventHandler.setInputAction(() => { viewer.entities.removeAll(); }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-        document.getElementById('customHomeBtn').onclick = () => {
-          const cp = viewer.camera.positionCartographic;
-          viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(Cesium.Math.toDegrees(cp.longitude), Cesium.Math.toDegrees(cp.latitude), DEFAULT_HEIGHT), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 } });
-        };
-
-        document.getElementById('buildingToggle').onchange = async (e) => { if (e.target.checked) { if (!buildingLayer) buildingLayer = await Cesium.Cesium3DTileset.fromIonAssetId(96188); viewer.scene.primitives.add(buildingLayer); } else if (buildingLayer) viewer.scene.primitives.remove(buildingLayer, true); };
-
-        document.getElementById('lightToggle').onchange = (e) => { viewer.scene.globe.enableLighting = e.target.checked; viewer.scene.shadowMap.enabled = e.target.checked; };
-
-        document.getElementById('compassContainer').onclick = () => { viewer.camera.flyTo({ destination: viewer.camera.position, orientation: { heading: 0.0, pitch: viewer.camera.pitch, roll: 0.0 } }); };
-
-        const bSatS = document.getElementById('baseSatSlider');
-        const rSatS = document.getElementById('railSatSlider');
-        const updateBaseSat = () => { if (baseLayer) baseLayer.saturation = parseFloat(bSatS.value); };
-        const updateRailSat = () => { if (railLayer) railLayer.saturation = parseFloat(rSatS.value); };
-        bSatS.oninput = (e) => { document.getElementById('baseSatVal').innerText = `${Math.round(e.target.value * 100)}%`; clearTimeout(window.bt); window.bt = setTimeout(updateBaseSat, 200); };
-        rSatS.oninput = (e) => { document.getElementById('railSatVal').innerText = `${Math.round(e.target.value * 100)}%`; clearTimeout(window.rt); window.rt = setTimeout(updateRailSat, 200); };
-
-        async function updateBaseMap(type) {
-          if (baseLayer) viewer.imageryLayers.remove(baseLayer);
-          let p;
-          switch(type) {
-            case 'osm': p = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' }); break;
-            case 'dark': p = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer'); break;
-            case 'arc_std': p = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer'); break;
-            case 'arc_sat': p = await Cesium.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer'); break;
-            case 'ion_sat': p = await Cesium.createWorldImageryAsync(); break;
-          }
-          baseLayer = viewer.imageryLayers.addImageryProvider(p, 0);
-          updateBaseSat();
+    // ===== RAILWAY MONITOR APPLICATION =====
+    
+    const APP = {
+      // Constants
+      DEFAULT_HEIGHT: 20000000.0,
+      PRIMARY_COLOR: '#5dade2',
+      ACCENT_COLOR: '#f1948a',
+      OSM_RADIUS_RANGE: { min: 50, max: 500 },
+      
+      // State
+      viewer: null,
+      layers: { base: null, rail: null, building: null, cachedTerrain: null },
+      ui: { isRotating: false, activeController: null },
+      
+      // Initialize app
+      async init() {
+        const token = document.getElementById('tokenInput').value.trim();
+        if (token) this.initSystem(token);
+      },
+      
+      // System initialization
+      async initSystem(token) {
+        try {
+          Cesium.Ion.defaultAccessToken = token;
+          this.viewer = new Cesium.Viewer('cesiumContainer', {
+            baseLayerPicker: false,
+            geocoder: false,
+            homeButton: false,
+            infoBox: false,
+            timeline: false,
+            animation: false,
+            baseLayer: false,
+            terrainProvider: new Cesium.EllipsoidTerrainProvider()
+          });
+          
+          // Initialize UI and features
+          this.setupEventHandlers();
+          this.setupSearch();
+          this.setupInspector();
+          this.setupHUD();
+          
+          // Load default layers
+          document.getElementById('tokenOverlay').style.display = 'none';
+          await this.updateBaseMap('osm');
+          this.loadRailway('standard');
+          
+          // Set initial camera position
+          this.viewer.camera.setView({
+            destination: Cesium.Cartesian3.fromDegrees(0, 0, this.DEFAULT_HEIGHT),
+            orientation: {
+              heading: 0,
+              pitch: Cesium.Math.toRadians(-90),
+              roll: 0
+            }
+          });
+        } catch (error) {
+          console.error('System initialization failed:', error);
         }
-
-        function loadRailway(style) { if (railLayer) viewer.imageryLayers.remove(railLayer); railLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({ url: `https://tiles.openrailwaymap.org/${style}/{z}/{x}/{y}.png` })); updateRailSat(); }
-
+      },
+      
+      // ===== EVENT HANDLERS =====
+      
+      setupEventHandlers() {
+        // Compass - Reset North
+        document.getElementById('compassContainer').onclick = () => {
+          this.viewer.camera.flyTo({
+            destination: this.viewer.camera.position,
+            orientation: {
+              heading: 0.0,
+              pitch: this.viewer.camera.pitch,
+              roll: 0.0
+            }
+          });
+        };
+        
+        // Home Button - Reset Height
+        document.getElementById('customHomeBtn').onclick = () => {
+          const cp = this.viewer.camera.positionCartographic;
+          this.viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(
+              Cesium.Math.toDegrees(cp.longitude),
+              Cesium.Math.toDegrees(cp.latitude),
+              this.DEFAULT_HEIGHT
+            ),
+            orientation: {
+              heading: 0,
+              pitch: Cesium.Math.toRadians(-90),
+              roll: 0
+            }
+          });
+        };
+        
+        // HUD Toggle
+        document.getElementById('hudToggle').onclick = () => {
+          document.body.classList.toggle('hud-hidden');
+        };
+        
+        // Map selection
+        document.getElementById('baseSelect').onchange = (e) => {
+          this.updateBaseMap(e.target.value);
+        };
+        
+        document.getElementById('railwaySelect').onchange = (e) => {
+          this.loadRailway(e.target.value);
+        };
+        
+        // Visual toggles
+        document.getElementById('buildingToggle').onchange = (e) => {
+          this.toggleBuildings(e.target.checked);
+        };
+        
+        document.getElementById('lightToggle').onchange = (e) => {
+          this.viewer.scene.globe.enableLighting = e.target.checked;
+          this.viewer.scene.shadowMap.enabled = e.target.checked;
+        };
+        
+        document.getElementById('terrainToggle').onchange = (e) => {
+          this.toggleTerrain(e.target.checked);
+        };
+        
+        // Rotation toggle
+        document.getElementById('rotateToggle').onchange = (e) => {
+          this.ui.isRotating = e.target.checked;
+        };
+        
+        // Saturation sliders
+        this.setupSaturationSliders();
+        
+        // Click to clear entities
+        this.viewer.screenSpaceEventHandler.setInputAction(() => {
+          this.viewer.entities.removeAll();
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+        
+        // Animation loop
+        this.viewer.scene.postUpdate.addEventListener(() => {
+          if (this.ui.isRotating) {
+            this.viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, 0.001);
+          }
+        });
+      },
+      
+      setupSaturationSliders() {
+        const baseSatSlider = document.getElementById('baseSatSlider');
+        const railSatSlider = document.getElementById('railSatSlider');
+        
+        baseSatSlider.oninput = (e) => {
+          const value = e.target.value;
+          document.getElementById('baseSatVal').innerText = `${Math.round(value * 100)}%`;
+          clearTimeout(window.baseSatTimeout);
+          window.baseSatTimeout = setTimeout(() => this.updateBaseSaturation(value), 200);
+        };
+        
+        railSatSlider.oninput = (e) => {
+          const value = e.target.value;
+          document.getElementById('railSatVal').innerText = `${Math.round(value * 100)}%`;
+          clearTimeout(window.railSatTimeout);
+          window.railSatTimeout = setTimeout(() => this.updateRailSaturation(value), 200);
+        };
+      },
+      
+      // ===== SEARCH FUNCTIONALITY =====
+      
+      setupSearch() {
+        document.getElementById('searchInput').addEventListener('keypress', async (e) => {
+          if (e.key !== 'Enter') return;
+          
+          const query = e.target.value.trim();
+          if (!query) return;
+          
+          await this.performStationSearch(query, e.target);
+        });
+      },
+      
+      async performStationSearch(query, inputElement) {
+        inputElement.disabled = true;
+        
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ' station')}&limit=1`
+          );
+          const data = await response.json();
+          
+          if (data && data.length > 0) {
+            const { lat, lon } = data[0];
+            this.flyToLocation(parseFloat(lon), parseFloat(lat));
+            inputElement.value = '';
+            inputElement.blur();
+          } else {
+            this.showSearchError(inputElement);
+          }
+        } catch (error) {
+          console.error('Search error:', error);
+        } finally {
+          inputElement.disabled = false;
+        }
+      },
+      
+      flyToLocation(lon, lat) {
+        this.viewer.entities.removeAll();
+        this.viewer.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(lon, lat),
+          point: {
+            pixelSize: 12,
+            color: Cesium.Color.fromCssColorString(this.PRIMARY_COLOR),
+            outlineColor: Cesium.Color.WHITE,
+            outlineWidth: 2
+          }
+        });
+        
+        this.viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(lon, lat, 15000),
+          orientation: {
+            heading: 0,
+            pitch: Cesium.Math.toRadians(-90),
+            roll: 0
+          }
+        });
+      },
+      
+      showSearchError(inputElement) {
+        inputElement.style.borderColor = this.ACCENT_COLOR;
+        setTimeout(() => (inputElement.style.borderColor = ''), 1000);
+      },
+      
+      // ===== BASEMAP MANAGEMENT =====
+      
+      async updateBaseMap(type) {
+        if (this.layers.base) {
+          this.viewer.imageryLayers.remove(this.layers.base);
+        }
+        
+        let provider;
+        
+        switch(type) {
+          case 'osm':
+            provider = new Cesium.OpenStreetMapImageryProvider({
+              url: 'https://a.tile.openstreetmap.org/'
+            });
+            break;
+          case 'dark':
+            provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
+              'https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer'
+            );
+            break;
+          case 'arc_std':
+            provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
+              'https://services.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer'
+            );
+            break;
+          case 'arc_sat':
+            provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
+              'https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer'
+            );
+            break;
+          case 'ion_sat':
+            provider = await Cesium.createWorldImageryAsync();
+            break;
+        }
+        
+        this.layers.base = this.viewer.imageryLayers.addImageryProvider(provider, 0);
+        this.updateBaseSaturation(document.getElementById('baseSatSlider').value);
+      },
+      
+      updateBaseSaturation(value) {
+        if (this.layers.base) {
+          this.layers.base.saturation = parseFloat(value);
+        }
+      },
+      
+      // ===== RAILWAY LAYER MANAGEMENT =====
+      
+      loadRailway(style) {
+        if (this.layers.rail) {
+          this.viewer.imageryLayers.remove(this.layers.rail);
+        }
+        
+        const urls = {
+          standard: 'https://tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png',
+          maxspeed: 'https://tiles.openrailwaymap.org/maxspeed/{z}/{x}/{y}.png',
+          signals: 'https://tiles.openrailwaymap.org/signals/{z}/{x}/{y}.png',
+          electrification: 'https://tiles.openrailwaymap.org/electrified/{z}/{x}/{y}.png',
+          gauge: 'https://tiles.openrailwaymap.org/gauge/{z}/{x}/{y}.png'
+        };
+        
+        this.layers.rail = this.viewer.imageryLayers.addImageryProvider(
+          new Cesium.UrlTemplateImageryProvider({
+            url: urls[style] || urls.standard
+          })
+        );
+        
+        this.updateRailSaturation(document.getElementById('railSatSlider').value);
+      },
+      
+      updateRailSaturation(value) {
+        if (this.layers.rail) {
+          this.layers.rail.saturation = parseFloat(value);
+        }
+      },
+      
+      // ===== 3D FEATURES =====
+      
+      async toggleBuildings(enabled) {
+        if (enabled) {
+          if (!this.layers.building) {
+            this.layers.building = await Cesium.Cesium3DTileset.fromIonAssetId(96188);
+          }
+          this.viewer.scene.primitives.add(this.layers.building);
+        } else if (this.layers.building) {
+          this.viewer.scene.primitives.remove(this.layers.building);
+        }
+      },
+      
+      async toggleTerrain(enabled) {
+        if (enabled) {
+          if (!this.layers.cachedTerrain) {
+            this.layers.cachedTerrain = await Cesium.createWorldTerrainAsync();
+          }
+          this.viewer.terrainProvider = this.layers.cachedTerrain;
+        } else {
+          this.viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+        }
+      },
+      
+      // ===== INSPECTOR =====
+      
+      setupInspector() {
         const inspectToggle = document.getElementById('inspectToggle');
         const inspectPanel = document.getElementById('inspectPanel');
         const inspectContent = document.getElementById('inspectContent');
         const inspectClose = document.getElementById('inspectClose');
-        const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-
+        
+        const handler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
+        
         handler.setInputAction(async (click) => {
-          if (!inspectToggle.checked) return; if (activeController) activeController.abort(); activeController = new AbortController();
-          let cartesian = viewer.scene.pickPosition(click.position); if (!Cesium.defined(cartesian)) cartesian = viewer.camera.pickEllipsoid(click.position); if (!Cesium.defined(cartesian)) return;
+          if (!inspectToggle.checked) return;
+          
+          if (this.ui.activeController) {
+            this.ui.activeController.abort();
+          }
+          
+          this.ui.activeController = new AbortController();
+          
+          let cartesian = this.viewer.scene.pickPosition(click.position);
+          if (!Cesium.defined(cartesian)) {
+            cartesian = this.viewer.camera.pickEllipsoid(click.position);
+          }
+          if (!Cesium.defined(cartesian)) return;
+          
           const carto = Cesium.Cartographic.fromCartesian(cartesian);
-          const lat = Cesium.Math.toDegrees(carto.latitude).toFixed(6); const lon = Cesium.Math.toDegrees(carto.longitude).toFixed(6);
-          inspectPanel.classList.add('active'); inspectContent.innerHTML = `<div style="color:#5dade2; animation: pulse 1s infinite;">📡 Querying OSM Database...</div>`;
+          const lat = Cesium.Math.toDegrees(carto.latitude).toFixed(6);
+          const lon = Cesium.Math.toDegrees(carto.longitude).toFixed(6);
+          
+          inspectPanel.classList.add('active');
+          inspectContent.innerHTML = '<div style="color:#5dade2; animation: pulse 1s infinite;">📡 Querying OSM Database...</div>';
+          
           try {
-            const radius = Math.min(500, Math.max(50, Math.round(viewer.camera.positionCartographic.height / 800)));
+            const height = this.viewer.camera.positionCartographic.height;
+            const radius = Math.min(
+              this.OSM_RADIUS_RANGE.max,
+              Math.max(this.OSM_RADIUS_RANGE.min, Math.round(height / 800))
+            );
+            
             const query = `[out:json][timeout:15];way(around:${radius},${lat},${lon})[railway];out tags center;`;
-            const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`, { signal: activeController.signal });
-            if (res.status === 429) { inspectContent.innerHTML = `<div style="color:#f1948a">Server Busy (429).<br>Please wait a moment.</div>`; return; }
-            const data = await res.json(); const element = data?.elements?.[0]; const tags = element?.tags;
-            if (!tags) { inspectContent.innerHTML = `<div style="color:#888">No railway data found within ${radius}m.</div>`; }
-            else {
+            const response = await fetch(
+              `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`,
+              { signal: this.ui.activeController.signal }
+            );
+            
+            if (response.status === 429) {
+              inspectContent.innerHTML = '<div style="color:#f1948a">Server Busy (429).<br>Please wait a moment.</div>';
+              return;
+            }
+            
+            const data = await response.json();
+            const element = data?.elements?.[0];
+            const tags = element?.tags;
+            
+            if (!tags) {
+              inspectContent.innerHTML = `<div style="color:#888">No railway data found within ${radius}m.</div>`;
+            } else {
               inspectContent.innerHTML = `<div class="inspect-data"><span class="inspect-label">Infrastructure</span>${tags.name || tags.railway || 'Unknown Track'}</div>`;
             }
-          } catch (e) { if (e.name === 'AbortError') return; inspectContent.innerHTML = `<div style="color:#f1948a">Connection Error.</div>`; }
+          } catch (error) {
+            if (error.name === 'AbortError') return;
+            inspectContent.innerHTML = '<div style="color:#f1948a">Connection Error.</div>';
+          }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-        inspectClose.onclick = () => { inspectPanel.classList.remove('active'); };
-
-        function updateHUD() {
-          const c = viewer.camera.positionCartographic; if (!c) return;
-          const lat = Cesium.Math.toDegrees(c.latitude), lon = Cesium.Math.toDegrees(c.longitude);
-          const utcOffset = Math.round(lon / 15); const now = new Date(); const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-          const solarDate = new Date(utc + (3600000 * utcOffset));
-          document.getElementById('timeVal').innerText = solarDate.toTimeString().split(' ')[0];
-          document.getElementById('tzVal').innerText = `UTC ${utcOffset >= 0 ? '+' : ''}${utcOffset}`;
-          document.getElementById('latVal').innerText = `${lat.toFixed(4)}°`;
-          document.getElementById('lonVal').innerText = `${lon.toFixed(4)}°`;
-          document.getElementById('altVal').innerText = `${(c.height/1000).toFixed(1)} km`;
-          document.getElementById('compassContainer').style.transform = `rotate(${-Cesium.Math.toDegrees(viewer.camera.heading)}deg)`;
-          const leftPos = viewer.camera.pickEllipsoid(new Cesium.Cartesian2(0, viewer.scene.canvas.clientHeight / 2));
-          const rightPos = viewer.camera.pickEllipsoid(new Cesium.Cartesian2(80, viewer.scene.canvas.clientHeight / 2));
-          if (leftPos && rightPos) { const distance = Cesium.Cartesian3.distance(leftPos, rightPos) / 1000; document.getElementById('scaleLabel').innerText = distance > 1 ? `${distance.toFixed(1)} KM` : `${(distance * 1000).toFixed(0)} M`; }
+        
+        inspectClose.onclick = () => {
+          inspectPanel.classList.remove('active');
+        };
+      },
+      
+      // ===== HUD & DISPLAY =====
+      
+      setupHUD() {
+        this.viewer.scene.preRender.addEventListener(() => this.updateHUD());
+      },
+      
+      updateHUD() {
+        const c = this.viewer.camera.positionCartographic;
+        if (!c) return;
+        
+        const lat = Cesium.Math.toDegrees(c.latitude);
+        const lon = Cesium.Math.toDegrees(c.longitude);
+        const utcOffset = Math.round(lon / 15);
+        
+        // Calculate solar time
+        const now = new Date();
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const solarDate = new Date(utc + (3600000 * utcOffset));
+        
+        // Update display elements
+        document.getElementById('timeVal').innerText = solarDate.toTimeString().split(' ')[0];
+        document.getElementById('tzVal').innerText = `UTC ${utcOffset >= 0 ? '+' : ''}${utcOffset}`;
+        document.getElementById('latVal').innerText = `${lat.toFixed(4)}°`;
+        document.getElementById('lonVal').innerText = `${lon.toFixed(4)}°`;
+        document.getElementById('altVal').innerText = `${(c.height / 1000).toFixed(1)} km`;
+        
+        // Update compass rotation
+        document.getElementById('compassContainer').style.transform = 
+          `rotate(${-Cesium.Math.toDegrees(this.viewer.camera.heading)}deg)`;
+        
+        // Update scale bar
+        this.updateScaleBar();
+      },
+      
+      updateScaleBar() {
+        const leftPos = this.viewer.camera.pickEllipsoid(
+          new Cesium.Cartesian2(0, this.viewer.scene.canvas.clientHeight / 2)
+        );
+        const rightPos = this.viewer.camera.pickEllipsoid(
+          new Cesium.Cartesian2(80, this.viewer.scene.canvas.clientHeight / 2)
+        );
+        
+        if (leftPos && rightPos) {
+          const distance = Cesium.Cartesian3.distance(leftPos, rightPos) / 1000;
+          const label = distance > 1 ? `${distance.toFixed(1)} KM` : `${(distance * 1000).toFixed(0)} M`;
+          document.getElementById('scaleLabel').innerText = label;
         }
-        viewer.scene.preRender.addEventListener(updateHUD);
-
-        document.getElementById('baseSelect').onchange = (e) => updateBaseMap(e.target.value);
-        document.getElementById('railwaySelect').onchange = (e) => loadRailway(e.target.value);
-        document.getElementById('rotateToggle').onchange = (e) => isRotating = e.target.checked;
-        document.getElementById('hudToggle').onclick = () => document.body.classList.toggle('hud-hidden');
-
-        document.getElementById('terrainToggle').onchange = async (e) => { if (e.target.checked) { if(!cachedTerrain) cachedTerrain = await Cesium.createWorldTerrainAsync(); viewer.terrainProvider = cachedTerrain; } else viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider(); };
-
-        viewer.scene.postUpdate.addEventListener(() => { if (isRotating) viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, 0.001); });
-
-        document.getElementById('tokenOverlay').style.display = 'none';
-        await updateBaseMap('osm');
-        loadRailway('standard');
-        viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(0, 0, DEFAULT_HEIGHT), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 } });
-
-      } catch (e) { console.error(e); }
-    }
+      }
+    };
+    
+    // ===== INITIALIZATION =====
+    
+    document.getElementById('startBtn').onclick = () => APP.init();
   </script>
 </body>
 </html>
