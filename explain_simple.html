@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Global Railway - Simple Monitor</title>
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.105/Build/Cesium/Cesium.js"></script>
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.105/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
@@ -11,11 +12,12 @@
       height: 100%;
       margin: 0;
       padding: 0;
+      overflow: hidden;
       background: #000;
     }
 
     .panel {
-      background: rgba(0, 0, 0, 0.75);
+      background: rgba(0, 0, 0, 0.78);
       color: #fff;
       padding: 12px;
       border-radius: 6px;
@@ -33,11 +35,12 @@
     }
 
     #loginBox {
-      width: 360px;
+      width: min(360px, calc(100vw - 32px));
       text-align: center;
     }
 
     #tokenInput,
+    #searchInput,
     select {
       width: 100%;
       padding: 8px;
@@ -48,7 +51,8 @@
       box-sizing: border-box;
     }
 
-    #tokenInput {
+    #tokenInput,
+    #searchInput {
       margin: 10px 0;
     }
 
@@ -62,11 +66,13 @@
       cursor: pointer;
     }
 
+    #startBtn:hover { background: #3498db; }
+
     #menu {
       position: absolute;
       top: 20px;
       left: 20px;
-      width: 260px;
+      width: 280px;
       z-index: 1000;
     }
 
@@ -75,7 +81,48 @@
       font-size: 12px;
       color: #5dade2;
       font-weight: 600;
-      margin: 8px 0 4px;
+      margin: 10px 0 4px;
+    }
+
+    .switch-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+
+    #inspectPanel {
+      position: absolute;
+      left: 320px;
+      bottom: 20px;
+      width: 300px;
+      z-index: 1000;
+      display: none;
+    }
+
+    #inspectPanel.active { display: block; }
+
+    #inspectClose {
+      float: right;
+      color: #5dade2;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 16px;
+    }
+
+    .inspect-title {
+      color: #5dade2;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .inspect-data { line-height: 1.6; }
+    .inspect-label { display: block; color: #aaa; font-size: 12px; }
+    .hint { color: #aaa; font-size: 12px; margin-top: 10px; }
+
+    @media (max-width: 700px) {
+      #menu { top: 10px; left: 10px; width: 240px; }
+      #inspectPanel { left: 10px; bottom: 10px; width: 280px; }
     }
   </style>
 </head>
@@ -83,7 +130,7 @@
   <div id="tokenOverlay">
     <div id="loginBox" class="panel">
       <h3 style="color:#5dade2; letter-spacing:2px; margin:0 0 8px;">RAILWAY MONITOR</h3>
-      <input type="password" id="tokenInput" placeholder="Paste your token here...">
+      <input type="password" id="tokenInput" placeholder="Paste your token here..." autocomplete="off">
       <button id="startBtn">INITIALIZE SYSTEM</button>
     </div>
   </div>
@@ -91,6 +138,9 @@
   <div id="cesiumContainer"></div>
 
   <div id="menu" class="panel" hidden>
+    <label class="label" for="searchInput">Station Search</label>
+    <input type="search" id="searchInput" placeholder="Enter station name..." autocomplete="off">
+
     <label class="label" for="railwaySelect">Railway Map</label>
     <select id="railwaySelect">
       <option value="standard">Infrastructure</option>
@@ -108,6 +158,18 @@
       <option value="arc_sat">ArcGIS Satellite</option>
       <option value="ion_sat">Cesium Ion Aerial</option>
     </select>
+
+    <div class="switch-container">
+      <span>Click Inspection</span>
+      <input type="checkbox" id="inspectToggle">
+    </div>
+    <div class="hint">Enable this mode, then click a railway on the map.</div>
+  </div>
+
+  <div id="inspectPanel" class="panel">
+    <span id="inspectClose" title="Close">×</span>
+    <div class="inspect-title">RAILWAY INSPECTOR</div>
+    <div id="inspectContent"></div>
   </div>
 
   <script>
@@ -115,6 +177,7 @@
       viewer: null,
       baseLayer: null,
       railwayLayer: null,
+      inspectController: null,
 
       async init() {
         const token = document.getElementById('tokenInput').value.trim();
@@ -136,7 +199,6 @@
           document.getElementById('tokenOverlay').style.display = 'none';
           document.getElementById('menu').hidden = false;
           this.setupEventHandlers();
-
           await this.updateBaseMap('osm');
           this.loadRailway('standard');
 
@@ -162,6 +224,117 @@
         document.getElementById('railwaySelect').onchange = (event) => {
           this.loadRailway(event.target.value);
         };
+
+        document.getElementById('searchInput').addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') this.searchStation(event.target);
+        });
+
+        document.getElementById('inspectClose').onclick = () => {
+          document.getElementById('inspectPanel').classList.remove('active');
+        };
+
+        const handler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
+        handler.setInputAction((click) => {
+          if (document.getElementById('inspectToggle').checked) {
+            this.inspectLocation(click.position);
+          }
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+      },
+
+      async searchStation(input) {
+        const query = input.value.trim();
+        if (!query) return;
+        input.disabled = true;
+
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query + ' station')}&limit=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          const results = await response.json();
+
+          if (!results.length) {
+            input.setCustomValidity('Station not found');
+            input.reportValidity();
+            return;
+          }
+
+          const { lat, lon } = results[0];
+          this.viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(parseFloat(lon), parseFloat(lat), 15000),
+            orientation: {
+              heading: 0,
+              pitch: Cesium.Math.toRadians(-90),
+              roll: 0
+            }
+          });
+          input.value = '';
+        } catch (error) {
+          console.error('Station search failed:', error);
+          alert('Station search failed. Please try again.');
+        } finally {
+          input.disabled = false;
+          input.setCustomValidity('');
+        }
+      },
+
+      async inspectLocation(screenPosition) {
+        if (this.inspectController) this.inspectController.abort();
+        this.inspectController = new AbortController();
+
+        let cartesian = this.viewer.scene.pickPosition(screenPosition);
+        if (!Cesium.defined(cartesian)) {
+          cartesian = this.viewer.camera.pickEllipsoid(screenPosition);
+        }
+        if (!Cesium.defined(cartesian)) return;
+
+        const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        const lat = Cesium.Math.toDegrees(cartographic.latitude).toFixed(6);
+        const lon = Cesium.Math.toDegrees(cartographic.longitude).toFixed(6);
+        const panel = document.getElementById('inspectPanel');
+        const content = document.getElementById('inspectContent');
+        panel.classList.add('active');
+        content.innerHTML = '<span style="color:#5dade2">Querying OpenStreetMap...</span>';
+
+        const query = `[out:json][timeout:15];way(around:500,${lat},${lon})[railway];out tags center;`;
+
+        try {
+          const response = await fetch(
+            `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`,
+            { signal: this.inspectController.signal }
+          );
+
+          if (response.status === 429) {
+            content.innerHTML = '<span style="color:#f1948a">Server busy. Please try again later.</span>';
+            return;
+          }
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+          const data = await response.json();
+          const tags = data?.elements?.[0]?.tags;
+          if (!tags) {
+            content.innerHTML = `<span style="color:#aaa">No railway data found near<br>${lat}, ${lon}</span>`;
+            return;
+          }
+
+          content.innerHTML = `
+            <div class="inspect-data">
+              <span class="inspect-label">Infrastructure</span>
+              ${this.escapeHtml(tags.name || tags.railway || 'Unknown track')}
+              <span class="inspect-label">Coordinates</span>
+              ${lat}, ${lon}
+            </div>`;
+        } catch (error) {
+          if (error.name === 'AbortError') return;
+          console.error('Inspection failed:', error);
+          content.innerHTML = '<span style="color:#f1948a">Connection error.</span>';
+        }
+      },
+
+      escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (char) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+        }[char]));
       },
 
       async updateBaseMap(type) {
@@ -173,9 +346,7 @@
         let provider;
         switch (type) {
           case 'osm':
-            provider = new Cesium.OpenStreetMapImageryProvider({
-              url: 'https://a.tile.openstreetmap.org/'
-            });
+            provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
             break;
           case 'dark':
             provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
@@ -216,9 +387,7 @@
         };
 
         this.railwayLayer = this.viewer.imageryLayers.addImageryProvider(
-          new Cesium.UrlTemplateImageryProvider({
-            url: urls[style] || urls.standard
-          })
+          new Cesium.UrlTemplateImageryProvider({ url: urls[style] || urls.standard })
         );
       }
     };
