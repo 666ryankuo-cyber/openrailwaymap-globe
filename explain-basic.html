@@ -3,11 +3,22 @@
 <head>
   <meta charset="utf-8">
   <title>Railway Monitor - Basic</title>
+
+  <!-- Cesium 圖資庫 -->
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.105/Build/Cesium/Cesium.js"></script>
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.105/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
   <style>
+    /* =========================================================
+       1) 全域畫面與基礎樣式
+       ========================================================= */
     html, body, #cesiumContainer {
-      width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -15,6 +26,7 @@
       color: #fff;
     }
 
+    /* 毛玻璃面板 */
     .glass {
       background: rgba(13, 16, 22, 0.82);
       border: 1px solid rgba(255,255,255,0.1);
@@ -23,81 +35,160 @@
       box-shadow: 0 12px 30px rgba(0,0,0,0.45);
     }
 
+    /* =========================================================
+       2) 登入遮罩層樣式
+       ========================================================= */
     #tokenOverlay {
-      position: fixed; inset: 0; z-index: 9999;
-      display: flex; align-items: center; justify-content: center;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       background: rgba(0,0,0,0.9);
     }
 
     #loginBox {
-      width: 420px; padding: 32px 28px; border-radius: 14px; text-align: center;
+      width: 420px;
+      padding: 32px 28px;
+      border-radius: 14px;
+      text-align: center;
     }
 
     #loginTitle {
-      margin: 0 0 18px; color: #5dade2; letter-spacing: 2px; font-size: 20px;
+      margin: 0 0 18px;
+      color: #5dade2;
+      letter-spacing: 2px;
+      font-size: 20px;
     }
 
     #tokenInput {
-      width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 8px;
-      background: #0e0e0e; color: #fff; border: 1px solid rgba(255,255,255,0.2);
-      margin-bottom: 16px; font-size: 14px; text-align: center;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: #0e0e0e;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      margin-bottom: 16px;
+      font-size: 14px;
+      text-align: center;
     }
 
     #startBtn {
-      width: 100%; padding: 12px 18px; border: none; border-radius: 8px;
-      background: #5dade2; font-weight: 700; color: white; cursor: pointer;
+      width: 100%;
+      padding: 12px 18px;
+      border: none;
+      border-radius: 8px;
+      background: #5dade2;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
     }
 
+    /* =========================================================
+       3) 左側功能選單樣式
+       ========================================================= */
     #menu {
-      position: absolute; top: 18px; left: 18px; z-index: 1000;
-      width: 260px; padding: 16px 14px; border-radius: 12px;
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      z-index: 1000;
+      width: 260px;
+      padding: 16px 14px;
+      border-radius: 12px;
     }
 
     #searchInput, select {
-      width: 100%; box-sizing: border-box; padding: 10px 12px; margin: 8px 0 12px;
-      border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);
-      background: rgba(0,0,0,0.3); color: #fff; font-size: 12px;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      margin: 8px 0 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.3);
+      color: #fff;
+      font-size: 12px;
     }
 
     .label {
-      color: #5dade2; font-size: 10px; font-weight: 700; letter-spacing: 1px;
-      text-transform: uppercase; border-bottom: 1px solid rgba(93,173,226,0.35);
-      padding-bottom: 6px; margin-top: 14px; margin-bottom: 6px;
+      color: #5dade2;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(93,173,226,0.35);
+      padding-bottom: 6px;
+      margin-top: 14px;
+      margin-bottom: 6px;
     }
 
+    /* =========================================================
+       4) 鐵路檢查器面板樣式
+       ========================================================= */
     #inspectPanel {
-      position: absolute; left: 300px; bottom: 24px; z-index: 1001;
-      width: 300px; padding: 18px 16px; border-radius: 12px; opacity: 0;
-      transform: translateX(-20px); transition: 0.3s ease; pointer-events: none;
+      position: absolute;
+      left: 300px;
+      bottom: 24px;
+      z-index: 1001;
+      width: 300px;
+      padding: 18px 16px;
+      border-radius: 12px;
+      opacity: 0;
+      transform: translateX(-20px);
+      transition: 0.3s ease;
+      pointer-events: none;
     }
 
     #inspectPanel.active {
-      opacity: 1; transform: translateX(0); pointer-events: auto;
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
     }
 
     .inspect-close {
-      position: absolute; top: 10px; right: 10px; color: #5dade2; font-size: 18px; cursor: pointer;
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: #5dade2;
+      font-size: 18px;
+      cursor: pointer;
     }
 
     .inspect-title {
-      color: #5dade2; font-size: 12px; font-weight: bold; letter-spacing: 1.5px;
-      margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(93,173,226,0.35);
+      color: #5dade2;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(93,173,226,0.35);
     }
 
     .inspect-row {
-      margin-bottom: 8px; font-size: 11px;
+      margin-bottom: 8px;
+      font-size: 11px;
     }
 
     .inspect-row .key {
-      display: block; font-size: 9px; letter-spacing: 1px; color: #888; margin-bottom: 4px; text-transform: uppercase;
+      display: block;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: #888;
+      margin-bottom: 4px;
+      text-transform: uppercase;
     }
 
     .inspect-row .value {
-      color: #fff; font-weight: 600;
+      color: #fff;
+      font-weight: 600;
     }
   </style>
 </head>
 <body>
+  <!-- =========================================================
+       5) 登入介面
+       ========================================================= -->
   <div id="tokenOverlay">
     <div id="loginBox" class="glass">
       <h3 id="loginTitle">RAILWAY MONITOR</h3>
@@ -106,8 +197,15 @@
     </div>
   </div>
 
+  <!-- Cesium 地圖容器 -->
   <div id="cesiumContainer"></div>
 
+  <!-- =========================================================
+       6) 左側功能選單
+       - 輸入站點搜尋
+       - 鐵道圖層切換
+       - 底圖切換
+       ========================================================= -->
   <div id="menu" class="glass">
     <input type="text" id="searchInput" placeholder="Station Search (Enter)..." autocomplete="off">
 
@@ -130,6 +228,9 @@
     </select>
   </div>
 
+  <!-- =========================================================
+       7) 點擊檢索面板
+       ========================================================= -->
   <div id="inspectPanel" class="glass">
     <div class="inspect-close" id="inspectClose">×</div>
     <div class="inspect-title">RAILWAY INSPECTOR</div>
@@ -137,15 +238,24 @@
   </div>
 
   <script>
+    /* =========================================================
+       8) 登入按鈕事件：點擊後啟動系統
+       ========================================================= */
     const startBtn = document.getElementById('startBtn');
     startBtn.addEventListener('click', () => {
       const token = document.getElementById('tokenInput').value.trim();
       if (token) initSystem(token);
     });
 
+    /* =========================================================
+       9) 初始化主程式
+       這裡建立 Cesium Viewer、載入底圖與鐵路圖層、綁定事件
+       ========================================================= */
     async function initSystem(token) {
+      // 設定 Cesium Ion 的 access token
       Cesium.Ion.defaultAccessToken = token;
 
+      // 建立 Cesium Viewer
       const viewer = new Cesium.Viewer('cesiumContainer', {
         baseLayerPicker: false,
         geocoder: false,
@@ -156,13 +266,20 @@
         terrainProvider: new Cesium.EllipsoidTerrainProvider()
       });
 
+      // 變數宣告：底圖/鐵路圖層
       let baseLayer = null;
       let railLayer = null;
 
+      /* =========================================================
+         10) 底圖切換功能
+         支援：OpenStreetMap / ArcGIS / Cesium Ion Aerial
+         ========================================================= */
       async function updateBaseMap(type) {
+        // 若已存在底圖，先移除
         if (baseLayer) viewer.imageryLayers.remove(baseLayer);
 
         let provider;
+
         switch (type) {
           case 'osm':
             provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
@@ -183,10 +300,16 @@
             provider = new Cesium.OpenStreetMapImageryProvider({ url: 'https://a.tile.openstreetmap.org/' });
         }
 
+        // 把底圖加入到影像層堆疊中，index 0 表示最底層
         baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
       }
 
+      /* =========================================================
+         11) 鐵道圖層變換功能
+         使用 OpenRailwayMap 的不同 style（standard / maxspeed / signals / electrification / gauge）
+         ========================================================= */
       function loadRailway(style) {
+        // 若已經有鐵道圖層，先移除
         if (railLayer) viewer.imageryLayers.remove(railLayer);
 
         railLayer = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
@@ -195,14 +318,20 @@
         }));
       }
 
+      // 事件綁定：底圖下拉選單
       document.getElementById('baseSelect').addEventListener('change', (e) => {
         updateBaseMap(e.target.value);
       });
 
+      // 事件綁定：鐵道圖層下拉選單
       document.getElementById('railwaySelect').addEventListener('change', (e) => {
         loadRailway(e.target.value);
       });
 
+      /* =========================================================
+         12) 輸入檢索功能（搜尋車站）
+         使用 Nominatim API 查詢地點，然後飛到指定座標
+         ========================================================= */
       document.getElementById('searchInput').addEventListener('keypress', async (e) => {
         if (e.key !== 'Enter') return;
 
@@ -210,7 +339,9 @@
         if (!query) return;
 
         try {
-          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ' station')}&limit=1`);
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ' station')}&limit=1`
+          );
           const data = await response.json();
 
           if (!data || data.length === 0) {
@@ -222,6 +353,7 @@
           const lat = parseFloat(data[0].lat);
           const lon = parseFloat(data[0].lon);
 
+          // 清除舊標記並新增新的搜尋點
           viewer.entities.removeAll();
           viewer.entities.add({
             position: Cesium.Cartesian3.fromDegrees(lon, lat),
@@ -233,11 +365,13 @@
             }
           });
 
+          // 飛到該地點，縮放到 15km 高度
           viewer.camera.flyTo({
             destination: Cesium.Cartesian3.fromDegrees(lon, lat, 15000),
             orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
           });
 
+          // 清空輸入框
           document.getElementById('searchInput').value = '';
           document.getElementById('searchInput').blur();
         } catch (err) {
@@ -245,13 +379,21 @@
         }
       });
 
+      /* =========================================================
+         13) 點擊檢索功能（查詢鐵道資訊）
+         透過 Overpass API 找出點擊附近的 railway 物件，並顯示其屬性
+         ========================================================= */
       const inspectPanel = document.getElementById('inspectPanel');
       const inspectContent = document.getElementById('inspectContent');
       const inspectClose = document.getElementById('inspectClose');
+
+      // 點擊關閉檢查器面板
       inspectClose.addEventListener('click', () => inspectPanel.classList.remove('active'));
 
+      // 監聽地圖點擊事件
       const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
       handler.setInputAction(async (click) => {
+        // 先嘗試抓取 click point 對應的 3D position，若沒有則抓 ellipsoid
         const cartesian = viewer.scene.pickPosition(click.position) || viewer.camera.pickEllipsoid(click.position);
         if (!Cesium.defined(cartesian)) return;
 
@@ -259,10 +401,12 @@
         const lat = Cesium.Math.toDegrees(carto.latitude).toFixed(6);
         const lon = Cesium.Math.toDegrees(carto.longitude).toFixed(6);
 
+        // 顯示面板並提示載入中
         inspectPanel.classList.add('active');
         inspectContent.innerHTML = '<div style="color:#5dade2;">Querying OSM…</div>';
 
         try {
+          // 半徑設定較小，避免查太大範圍
           const radius = 150;
           const query = `[out:json][timeout:15];way(around:${radius},${lat},${lon})[railway];out tags center;`;
           const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
@@ -281,6 +425,7 @@
             return;
           }
 
+          // 將資料顯示於檢查器中
           inspectContent.innerHTML = `
             <div class="inspect-row"><span class="key">Infrastructure</span><span class="value">${tags.name || tags.railway || 'Unknown track'}</span></div>
             <div class="inspect-row"><span class="key">Type</span><span class="value">${tags.usage || 'N/A'} / ${tags.service || 'N/A'}</span></div>
@@ -295,9 +440,16 @@
         }
       }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
+      /* =========================================================
+         14) 啟動系統完成後隱藏登入遮罩
+         ========================================================= */
       document.getElementById('tokenOverlay').style.display = 'none';
+
+      // 預設載入 OpenStreetMap 和 standard 鐵道層
       await updateBaseMap('osm');
       loadRailway('standard');
+
+      // 初始視角：全球鳥瞰
       viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000),
         orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
